@@ -1,0 +1,895 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>실로폰 타일</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one-screen classroom stage — control bar, measure strip, then a canvas where tiles fall onto a drawn xylophone */
+:root{
+  --bg:#E9EDF4; --panel:#FFFFFF; --ink:#18213A; --muted:#5B6683; --line:#CDD5E3;
+  --stage:#F8FAFD; --lane:#EEF2F8; --grid:#9AA6BF;
+  --accent:#0F7F67; --accent-ink:#FFFFFF;
+  --left:#2F66F5; --right:#F2650F; --rest:#7C879E; --wood:#9B7652;
+  --sec0:#DCE6FF; --sec1:#FFE7D3; --sec2:#D7F2E6; --sec3:#F1DDF7;
+  --font-disp:"Jua","IBM Plex Sans KR","Malgun Gothic",sans-serif;
+  --font-ui:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0C111C; --panel:#151C2B; --ink:#E7ECF6; --muted:#97A2BC; --line:#2A3448;
+  --stage:#0A0F18; --lane:#111827; --grid:#55617C;
+  --accent:#34C99E; --accent-ink:#06261D;
+  --left:#5B8BFF; --right:#FF8636; --rest:#8C97AE; --wood:#7A5B3E;
+  --sec0:#1E2B4D; --sec1:#3F2A1A; --sec2:#173A2D; --sec3:#36203F;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0C111C; --panel:#151C2B; --ink:#E7ECF6; --muted:#97A2BC; --line:#2A3448;
+  --stage:#0A0F18; --lane:#111827; --grid:#55617C;
+  --accent:#34C99E; --accent-ink:#06261D;
+  --left:#5B8BFF; --right:#FF8636; --rest:#8C97AE; --wood:#7A5B3E;
+  --sec0:#1E2B4D; --sec1:#3F2A1A; --sec2:#173A2D; --sec3:#36203F;
+  color-scheme:dark}
+html,body{height:100%}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;font-size:14px}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);overflow:hidden;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#app{height:100%;display:flex;flex-direction:column;gap:8px;padding-block:10px;position:relative}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.brand{font-family:var(--font-disp);font-size:22px;letter-spacing:.5px;margin-right:4px;white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;background:transparent;color:var(--muted);padding:8px 12px;font:600 14px var(--font-ui);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:10px;padding:8px 12px;font:600 14px var(--font-ui);cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-size:16px;padding:9px 18px;min-width:108px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--left);outline-offset:2px}
+.tempo{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px 8px}
+.tempo .lab{font-size:13px;color:var(--muted);font-weight:600}
+.tempo .num{font:24px var(--font-disp);min-width:44px;text-align:center;font-variant-numeric:tabular-nums}
+.tempo button{border:0;background:var(--lane);color:var(--ink);width:30px;height:30px;border-radius:8px;font:700 18px var(--font-ui);cursor:pointer}
+.tempo input[type=range]{width:120px;accent-color:var(--accent)}
+.spacer{flex:1}
+.stripRow{display:flex;align-items:center;gap:10px}
+.stripRow .lab{font-size:13px;color:var(--muted);font-weight:600;white-space:nowrap}
+#strip{flex:1;min-width:0;display:flex;gap:3px;overflow-x:auto;padding-bottom:2px;touch-action:none;user-select:none}
+.mb{flex:1 0 24px;height:38px;border:1px solid transparent;border-radius:6px;background:var(--sec0);color:var(--ink);font:600 12px var(--font-ui);cursor:pointer;position:relative;padding:0;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;font-variant-numeric:tabular-nums}
+.mb[data-sec="1"]{background:var(--sec1)}.mb[data-sec="2"]{background:var(--sec2)}.mb[data-sec="3"]{background:var(--sec3)}
+.mb .sl{position:absolute;top:2px;left:4px;font:13px var(--font-disp);color:var(--muted);white-space:nowrap}
+.mb.out{opacity:.35}
+.mb.cur{border-color:var(--ink);box-shadow:inset 0 -4px 0 var(--ink)}
+#selInfo{font-size:13px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+label.chk{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer}
+label.chk input{width:18px;height:18px;accent-color:var(--accent)}
+.stage{flex:1;min-height:0;position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--stage)}
+#cv{width:100%;height:100%;display:block}
+#panel h2,#btPanel h2{font:20px var(--font-disp);margin:0}
+.row input[type=number]{width:84px;font:600 15px var(--font-ui);padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.row input[type=file]{font:14px var(--font-ui);max-width:100%}
+.row .bar{gap:6px 8px}
+#panel,#btPanel{position:absolute;right:0;top:56px;z-index:5;width:min(380px,100%);max-height:calc(100% - 70px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px rgba(10,20,40,.18);padding:16px;display:grid;gap:14px}
+#panel h2{font:20px var(--font-disp);margin:0}
+.row{display:grid;gap:6px}
+.row>.k{font-size:13px;font-weight:700;color:var(--muted)}
+.row .seg{width:max-content;max-width:100%;flex-wrap:wrap}
+.row select{font:600 14px var(--font-ui);padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);width:max-content}
+.row input[type=range]{width:100%;accent-color:var(--accent)}
+.hint{font-size:12.5px;color:var(--muted);line-height:1.5;margin:0}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:13px;line-height:1.4}
+kbd{font:600 12px var(--font-ui);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;background:var(--bg);white-space:nowrap}
+#app:fullscreen{background:var(--bg);padding:10px max(16px,env(safe-area-inset-left,0px))}
+@media (max-width:640px){.brand{display:none}.tempo input[type=range]{width:80px}.btn{padding:7px 10px}}
+</style>
+
+<div id="app">
+  <div class="bar">
+    <div class="brand">실로폰 타일</div>
+    <div class="seg" id="songSeg" role="group" aria-label="곡 선택">
+      <button data-song="rainbow">오버 더 레인보우</button>
+      <button data-song="dynamite">다이너마이트</button>
+    </div>
+    <button class="btn primary" id="playBtn">▶ 시작</button>
+    <button class="btn" id="stopBtn" title="처음 위치로 (R)">■ 처음으로</button>
+    <div class="tempo">
+      <span class="lab">빠르기 ♩=</span>
+      <button id="bpmDown" aria-label="느리게">−</button>
+      <span class="num" id="bpmNum">76</span>
+      <button id="bpmUp" aria-label="빠르게">+</button>
+      <input type="range" id="bpmRange" min="30" max="160" step="1" aria-label="빠르기">
+    </div>
+    <button class="btn" id="metBtn">♩ 메트로놈</button>
+    <button class="btn" id="melBtn">♪ 멜로디 소리</button>
+    <button class="btn" id="fermBtn">늘임표: 선생님 신호</button>
+    <button class="btn" id="hideBtn" title="계이름 가리기 (H)">계이름: 보이기</button>
+    <div class="spacer"></div>
+    <button class="btn" id="btBtn" aria-expanded="false">♫ 반주</button>
+    <button class="btn" id="setBtn" aria-expanded="false">설정</button>
+    <button class="btn" id="fsBtn">전체 화면</button>
+    <button class="btn" id="themeBtn" aria-label="밝게/어둡게">◐</button>
+  </div>
+  <div class="stripRow">
+    <span class="lab">마디</span>
+    <div id="strip" aria-label="마디 선택: 누르면 그 마디부터, 끌면 구간"></div>
+    <span id="selInfo"></span>
+    <label class="chk"><input type="checkbox" id="loopChk"> 구간 반복</label>
+    <button class="btn" id="allBtn">전체</button>
+  </div>
+  <div class="stage" id="stage"><canvas id="cv"></canvas></div>
+
+  <div id="btPanel" hidden>
+    <h2 id="btTitle">반주</h2>
+    <div class="row"><span class="k">반주 파일 (mp3, m4a, wav)</span>
+      <input type="file" id="btFile" accept="audio/*">
+      <p class="hint" id="btName">아직 반주 파일이 없어요.</p>
+      <div class="bar"><button class="btn" id="btDel">파일 지우기</button></div>
+      <p class="hint">한 번 불러오면 이 브라우저에 곡별로 저장돼서 다음에 열어도 남아 있어요.</p></div>
+    <div class="row"><span class="k">반주 틀기</span>
+      <div class="seg" id="btOnSeg"><button data-v="1">켜기</button><button data-v="0">끄기</button></div></div>
+    <div class="row"><span class="k">① 첫 음 위치 맞추기</span>
+      <div class="bar"><button class="btn" id="btPrev">▶ 처음부터 듣기</button><button class="btn primary" id="btMark">지금이 첫 음!</button></div>
+      <p class="hint" id="btFirstHint"></p>
+      <div class="bar"><span>첫 음: <b id="btFirstVal">0.00</b>초</span>
+        <button class="btn" data-nudge="-0.05">−0.05</button><button class="btn" data-nudge="0.05">+0.05</button>
+        <button class="btn" id="btCheck">첫 음 3초 전부터 확인</button></div></div>
+    <div class="row"><span class="k">② 반주 빠르기 맞추기</span>
+      <div class="bar"><button class="btn" id="btTap">박에 맞춰 탭</button>
+        <span>♩=</span><input type="number" id="btBpm" min="30" max="240" step="0.5" aria-label="반주 빠르기">
+        <button class="btn" id="btHalf">÷2</button><button class="btn" id="btDouble">×2</button></div>
+      <p class="hint">반주를 들으면서 악보의 한 박(♩)마다 8번 정도 탭하세요. 너무 빠르거나 느리게 나오면 ÷2, ×2를 누르세요.</p></div>
+    <div class="row"><span class="k">반주 소리 크기</span><input type="range" id="btVol" min="0" max="1" step="0.05"></div>
+    <p class="hint">반주를 켜면 위의 빠르기를 바꿔도 음 높이는 그대로 두고 반주만 느려지거나 빨라져요. 늘임표는 반주에 맞게 자동으로 이어가니, 설정의 "더 늘이는 길이"를 반주 속 늘임표 길이에 맞춰 주세요.</p>
+  </div>
+
+  <div id="panel" hidden>
+    <h2>설정</h2>
+    <div class="row"><span class="k">시작 전 준비 박</span>
+      <div class="seg" id="ciSeg"><button data-v="0">없음</button><button data-v="2">2박</button><button data-v="4">4박 (한 마디)</button><button data-v="8">8박 (두 마디)</button></div></div>
+    <div class="row"><span class="k">손 정하기</span>
+      <div class="seg" id="handSeg"><button data-v="auto">자연스럽게 (추천)</button><button data-v="zone">경계로 나누기</button><button data-v="alt">번갈아</button><button data-v="right">오른손만</button></div>
+      <p class="hint">자연스럽게: 손이 덜 움직이도록 정하고, 빠른 음은 두 손이 나눠 치며, 두 손이 엇갈리지 않아요. 왼쪽 음이 이어질 때는 오른손이 옆에서 도와줘요.<br>경계로 나누기: 정한 건반부터 오른쪽은 오른손, 왼쪽은 왼손.</p>
+      <p class="hint"><b>멈춘 상태에서 떨어지는 타일을 누르면</b> 그 음만 왼손↔오른손이 바뀌어요.</p>
+      <div class="bar"><button class="btn" id="resetHands">직접 바꾼 손 되돌리기</button></div></div>
+    <div class="row" id="splitRow"><span class="k">오른손이 시작되는 건반</span><select id="splitSel"></select></div>
+    <div class="row"><span class="k">채 움직임 보기</span>
+      <div class="seg" id="malSeg"><button data-v="1">보기</button><button data-v="0">숨기기</button></div>
+      <p class="hint">손마다 큰 채가 하나씩 나와서 칠 음 위로 올라갔다가 정확한 순간에 건반으로 내려옵니다. 긴 쉼표에서는 회색으로 바뀌며 아래로 내려놓아요.</p></div>
+    <div class="row"><span class="k">타일 색깔</span>
+      <div class="seg" id="colSeg"><button data-v="note">건반 색 (실로폰과 같게)</button><button data-v="hand">손 색 (파랑=왼손, 주황=오른손)</button></div></div>
+    <div class="row"><span class="k">계이름 가리기</span>
+      <div class="seg" id="hideSeg"><button data-v="0">모두 보이기</button><button data-v="1">떨어지는 음만 가리기</button><button data-v="2">건반까지 모두 가리기</button></div>
+      <p class="hint">외운 뒤에는 색깔과 자리만 보고 연주해 봐요. 손 표시와 채 움직임은 그대로 나와요.</p></div>
+    <div class="row"><span class="k">음 이름</span>
+      <div class="seg" id="nameSeg"><button data-v="ko">도레미</button><button data-v="en">CDE</button></div></div>
+    <div class="row"><span class="k">늘임표 (오버 더 레인보우 24마디)</span>
+      <div class="seg" id="fermSeg"><button data-v="hold">선생님 신호 기다리기</button><button data-v="extend">자동으로 늘였다 이어가기</button></div>
+      <p class="hint">자동: 박을 끊지 않고 정해진 박만큼 늘인 뒤 "하나, 둘"과 함께 바로 이어서 연주해요. 반주를 틀 때는 항상 자동이에요.</p></div>
+    <div class="row"><span class="k">자동일 때 더 늘이는 길이</span>
+      <div class="seg" id="extSeg"><button data-v="1">1박</button><button data-v="2">2박</button><button data-v="3">3박</button><button data-v="4">4박</button></div></div>
+    <div class="row"><span class="k">미리 보이는 박 수: <b id="lookVal">6</b>박</span>
+      <input type="range" id="lookRange" min="3" max="12" step="1"></div>
+    <div class="row"><span class="k">구간 반복할 때마다 빨라지기</span>
+      <div class="seg" id="incSeg"><button data-v="0">그대로</button><button data-v="2">+2</button><button data-v="4">+4</button><button data-v="6">+6</button></div></div>
+    <div class="row"><span class="k">메트로놈 소리 크기</span><input type="range" id="metVol" min="0" max="1" step="0.05"></div>
+    <div class="row"><span class="k">음 소리 크기</span><input type="range" id="melVol" min="0" max="1" step="0.05"></div>
+    <div class="row"><span class="k">화면·소리 맞추기: <b id="offVal">0</b>ms</span>
+      <input type="range" id="offRange" min="-150" max="400" step="10">
+      <p class="hint">블루투스 스피커처럼 소리가 늦게 나면 오른쪽으로 옮겨서 타일이 선에 닿는 순간과 딸깍 소리를 맞추세요.</p></div>
+    <div class="row"><span class="k">단축키</span>
+      <div class="keys">
+        <kbd>Space</kbd><span>시작 · 멈춤 · 늘임표 뒤 계속</span>
+        <kbd>↑ ↓</kbd><span>빠르기 ±2</span>
+        <kbd>← →</kbd><span>시작 마디 옮기기</span>
+        <kbd>R</kbd><span>처음으로</span>
+        <kbd>M</kbd><span>메트로놈 켜기/끄기</span>
+        <kbd>N</kbd><span>음 소리 켜기/끄기</span>
+        <kbd>H</kbd><span>계이름 가리기 (보이기 → 음만 → 모두)</span>
+        <kbd>F</kbd><span>전체 화면</span>
+      </div></div>
+  </div>
+</div>
+
+<script>
+// ---------- score data (transcribed from the club songbook) ----------
+const LETTERS='CDEFGAB', SEMI=[0,2,4,5,7,9,11], KO=['도','레','미','파','솔','라','시'];
+const NOTE_COLORS=['#E53935','#F57C00','#E9B800','#43A047','#1E88E5','#3949AB','#8E24AA'];
+const R1='C4:2 C5:2', R2='B4:1 G4:.5 A4:.5 B4:1 C5:1', R3='C4:2 A4:2', R4='G4:4', R5='A3:2 F4:2',
+      R6='E4:1 C4:.5 D4:.5 E4:1 F4:1', R7='D4:1 B3:.5 C4:.5 D4:1 E4:1',
+      R17='E4:.5 G4:.5 E4:.5 G4:.5 E4:.5 G4:.5 R:.5 G4:.5', R18='F4:.5 G4:.5 F4:.5 G4:.5 F4:.5 G4:.5 R:.5 G4:.5';
+const D2='E5:1 D5:1 C5:1 B4:1', D3='A4:.5 G4:.25 G4:.25 R:2 G4:.5 G4:.5',
+      D6='D4:.25 E4:.5 G4:.75 A4:.5 B4:.25 C5:.5 B4:.75 C5:.5', D7='D5:1 D5:1 B4:1 R:.5 G4:.5',
+      G8='G4:.5 '.repeat(8), G5B='G4:.5 '.repeat(5)+'B4:.5 R:1', G5D='G4:.5 '.repeat(5)+'D4:.5 R:1';
+const SONGS={
+  // hands: fixed hand choices {measure(0-based): {note index in measure: 'L'|'R'}}
+  rainbow:{title:'오버 더 레인보우',bpm:76,split:32,sharps:[],hands:{6:{0:'R'},14:{0:'R'},30:{0:'R'}},
+    sections:[[0,'가'],[8,'나'],[16,'다'],[24,'라']],
+    m:[R1,R2,R3,R4,R5,R6,R7,'D4:4', R1,R2,R3,R4,R5,R6,R7,'C4:3 R:.5 G4:.5',
+       R17,R18,'A4:2 A4:2','A4:2 G4:1 R:.5 G4:.5', R17,R18,'A4:2 A4:2','A4:2 D5:2^',
+       R1,R2,R3,R4,R5,R6,R7,'C4:4']},
+  dynamite:{title:'다이너마이트',bpm:70,split:33,sharps:[3],
+    sections:[[0,'가'],[9,'나 솔솔솔'],[15,'다 마무리']],
+    m:['R:3 G4:1',D2,D3,D2,D3,D6,D7,D2,D3,G8,G5B,G8,G5D,G8,G5B,D6,D7,D2,'A4:.5 G4:.25 G4:.25 R:2']}
+};
+const pidx=p=>parseInt(p[1])*7+LETTERS.indexOf(p[0]);
+for(const s of Object.values(SONGS)) s.parsed=s.m.map(str=>str.trim().split(/\s+/).map(tok=>{
+  const ferm=tok.endsWith('^'); if(ferm) tok=tok.slice(0,-1);
+  const [p,d]=tok.split(':'); return {key:p==='R'?null:pidx(p),dur:parseFloat(d),ferm};
+}));
+
+// ---------- settings ----------
+const DEF={song:'rainbow',countIn:4,hideNames:0,hand:'auto',over:{rainbow:{},dynamite:{}},color:'note',names:'ko',look:6,ferm:'hold',loopInc:0,
+  mallet:1,metVol:.7,melVol:.6,met:true,mel:false,offset:0,loop:false,bpm:{rainbow:76,dynamite:70},split:{rainbow:32,dynamite:33},
+  fermExt:2,btVol:.8,bt:{rainbow:{on:1,bpm:76,first:0},dynamite:{on:1,bpm:70,first:0}}};
+let S=structuredClone(DEF);
+try{const raw=localStorage.getItem('xylo-tiles-v1'); if(raw){const o=JSON.parse(raw), ob=o.bt||{};
+  S={...S,...o,bpm:{...DEF.bpm,...o.bpm},split:{...DEF.split,...o.split},
+    bt:{rainbow:{...DEF.bt.rainbow,...ob.rainbow},dynamite:{...DEF.bt.dynamite,...ob.dynamite}}};}}catch(e){}
+if(!S.colorV2){S.color='note'; S.colorV2=1;}
+if(!S.handV2){S.hand='auto'; S.handV2=1;}
+S.over={rainbow:{},dynamite:{},...(S.over||{})};
+function save(){try{localStorage.setItem('xylo-tiles-v1',JSON.stringify(S));}catch(e){}}
+
+// ---------- timeline ----------
+let events=[],mStart=[],mEnd=[],mSet=new Set(),holds=[],songEnd=0,lastNote=null,lastNoteEnd=0,keyMin=0,keyMax=0,keys=[];
+let selA=0,selB=0,R=null;
+function build(){
+  const s=SONGS[S.song]; events=[];mStart=[];mEnd=[];holds=[]; let pos=0;
+  s.parsed.forEach((meas,mi)=>{
+    mStart[mi]=pos; let hold=false;
+    meas.forEach(n=>{
+      const ev={start:pos,dur:n.dur,key:n.key,ferm:n.ferm,m:mi};
+      const fm=fermMode();
+      if(n.ferm&&fm==='extend'){ev.dur+=S.fermExt; ev.fermExt=S.fermExt;}
+      if(n.ferm&&fm==='hold') hold=true;
+      events.push(ev); pos+=ev.dur;
+    });
+    mEnd[mi]=pos;
+    if(hold){holds.push(pos); events.push({start:pos,dur:2,key:null,prep:true,m:mi}); pos+=2;}
+  });
+  songEnd=pos; mSet=new Set(mStart);
+  let ni=0; for(const e of events) if(e.key!=null) e.ni=ni++;
+  const notes=events.filter(e=>e.key!=null);
+  lastNote=notes[notes.length-1]; lastNoteEnd=lastNote.start+lastNote.dur;
+  keyMin=Math.min(...notes.map(e=>e.key)); keyMax=Math.max(...notes.map(e=>e.key));
+  keys=[]; for(let k=keyMin;k<=keyMax;k++) keys.push(k);
+  const used=new Set(notes.map(e=>e.key)); keys.used=used;
+  // rests: group consecutive rests, remember where the next note lands
+  let next=Infinity;
+  for(let i=events.length-1;i>=0;i--){const e=events[i]; e.next=next; if(e.key!=null) next=e.start;}
+  for(let i=0;i<events.length;){
+    const e=events[i]; if(e.key!=null||e.prep){i++;continue;}
+    let j=i; while(j<events.length&&events[j].key==null&&!events[j].prep) j++;
+    const run={s:events[i].start,e:events[j-1].start+events[j-1].dur};
+    for(let k=i;k<j;k++) events[k].run=run; i=j;
+  }
+  assignHands();
+  selA=Math.min(selA,mStart.length-1); selB=Math.min(selB,mStart.length-1);
+}
+function assignHands(){
+  const notes=events.filter(e=>e.key!=null), fixed=SONGS[S.song].hands||{}, ov={};
+  let pm=-1, idx=0;
+  for(const e of notes){if(e.m!==pm){pm=e.m; idx=0;} const f=fixed[e.m]&&fixed[e.m][idx++]; if(f) ov[e.ni]=f;}
+  Object.assign(ov,S.over[S.song]||{});
+  if(S.hand==='auto') autoHands(notes,ov);
+  else {
+    let alt='R'; const split=S.split[S.song];
+    for(const e of events){
+      if(e.key==null){ if(!e.prep) alt='R'; continue; }
+      if(S.hand==='zone') e.hand=e.key<split?'L':'R';
+      else if(S.hand==='right') e.hand='R';
+      else {e.hand=alt; alt=alt==='R'?'L':'R';}
+    }
+  }
+  for(const e of notes) if(ov[e.ni]) e.hand=ov[e.ni];
+  // how many beats before the hit this hand should start lifting the mallet
+  const lastBy={L:-Infinity,R:-Infinity};
+  for(const e of notes){e.up=Math.min(1,Math.max(.25,(e.start-lastBy[e.hand])*.5)); lastBy[e.hand]=e.start;}
+}
+// "자연스럽게": pick L/R for every note so hands move as little as possible, fast notes alternate,
+// hands never cross, and each hand leans toward its own side. Solved exactly with a Viterbi pass
+// over states (hand that just played, where the other hand is resting).
+function autoHands(notes,ov){
+  if(!notes.length) return;
+  const span=keyMax-keyMin, mid=(keyMin+keyMax)/2, home={L:Math.round(keyMin+span*.3),R:Math.round(keyMin+span*.7)};
+  const other=h=>h==='L'?'R':'L';
+  const zone=(h,k)=>h==='L'?Math.max(0,k-(mid+.5))*.4:Math.max(0,(mid-.5)-k)*.4;
+  // gap: beats since the previous note (any hand); free: beats this hand has had to travel since it last played
+  const step=(h,k,from,oth,same,gap,free=gap)=>{
+    const lp=h==='L'?k:oth, rp=h==='R'?k:oth;
+    return Math.abs(from-k)/Math.min(1,Math.max(.35,free))+(same&&gap<=1?(1.25-gap)*2:0)+zone(h,k)+(lp>rp?10:0);
+  };
+  const force=(e,h)=>ov[e.ni]&&ov[e.ni]!==h?1000:0;
+  let layer=new Map(); const back=[];
+  for(const h of ['L','R']){const k=notes[0].key; layer.set(h+home[other(h)],{c:step(h,k,home[h],home[other(h)],false,2)+force(notes[0],h),h,o:home[other(h)],ot:-Infinity,p:null});}
+  back.push(layer);
+  for(let i=1;i<notes.length;i++){
+    const e=notes[i], k=e.key, pk=notes[i-1].key, gap=e.start-notes[i-1].start, next=new Map();
+    for(const [key,s] of layer) for(const h of ['L','R']){
+      const same=h===s.h, from=same?pk:s.o, oth=same?s.o:pk, free=same?gap:e.start-s.ot, ot=same?s.ot:notes[i-1].start;
+      const c=s.c+step(h,k,from,oth,same,gap,free)+force(e,h), nk=h+oth, cur=next.get(nk);
+      if(!cur||c<cur.c) next.set(nk,{c,h,o:oth,ot,p:key});
+    }
+    layer=next; back.push(layer);
+  }
+  let bestKey=null,best=Infinity; for(const [key,s] of layer) if(s.c<best){best=s.c; bestKey=key;}
+  for(let i=notes.length-1;i>=0;i--){const s=back[i].get(bestKey); notes[i].hand=s.h; bestKey=s.p;}
+  // identical measures get identical sticking (children learn a phrase once): try each variant, keep the cheapest overall
+  const total=()=>{let pos={...home},last={L:-Infinity,R:-Infinity},ph=null,pt=0,c=0;
+    for(const e of notes){const h=e.hand, gap=ph?e.start-pt:2;
+      c+=step(h,e.key,pos[h],pos[other(h)],h===ph,gap,Math.min(2,e.start-last[h]))+force(e,h); pos[h]=e.key; last[h]=e.start; ph=h; pt=e.start;} return c;};
+  const meas=SONGS[S.song].m, groups=new Map();
+  for(const e of notes){const gk=meas[e.m]; if(!groups.has(gk)) groups.set(gk,new Map()); const gm=groups.get(gk); if(!gm.has(e.m)) gm.set(e.m,[]); gm.get(e.m).push(e);}
+  for(const gm of groups.values()){
+    const occ=[...gm.values()]; if(occ.length<2) continue;
+    const cands=[...new Set(occ.map(o=>o.map(e=>e.hand).join('')))]; if(cands.length<2) continue;
+    let best=cands[0],bc=Infinity;
+    for(const cand of cands){occ.forEach(o=>o.forEach((e,i)=>e.hand=cand[i])); const c=total(); if(c<bc){bc=c; best=cand;}}
+    occ.forEach(o=>o.forEach((e,i)=>e.hand=best[i]));
+  }
+}
+function range(){
+  const a=Math.min(selA,selB), b=Math.max(selA,selB), full=b===mStart.length-1;
+  return {a,b,full,start:mStart[a],end:full?songEnd:mEnd[b],playEnd:full?songEnd+4:mEnd[b],clickEnd:full?Math.ceil(lastNoteEnd-1e-6):mEnd[b]};
+}
+function mIndexAt(p){let i=0; while(i+1<mStart.length&&mStart[i+1]<=p+1e-9) i++; return i;}
+const midi=k=>12*(Math.floor(k/7)+1)+SEMI[k%7]+(SONGS[S.song].sharps.includes(k%7)?1:0);
+const noteName=k=>S.names==='ko'?KO[k%7]:LETTERS[k%7];
+const octWord=k=>{const o=Math.floor(k/7); return o<4?'낮은':o>4?'높은':'';};
+
+// ---------- audio ----------
+let ac=null,master=null,live=[];
+function ensureAudio(){
+  if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)(); master=ac.createGain(); master.connect(ac.destination);}
+  if(ac.state==='suspended') ac.resume();
+}
+function track(o){live.push(o); o.onended=()=>{const i=live.indexOf(o); if(i>=0) live.splice(i,1);};}
+function stopNodes(){for(const o of live){try{o.stop();}catch(e){}} live=[];}
+function click(t,accent){
+  const v=S.metVol*(accent?1:.6); if(v<=0) return;
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.type='triangle'; o.frequency.value=accent?1760:1175;
+  g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(v,t+.002); g.gain.exponentialRampToValueAtTime(.0001,t+.07);
+  o.connect(g).connect(master); o.start(t); o.stop(t+.09); track(o);
+}
+function bell(t,key){
+  const v=S.melVol*.45; if(v<=0) return;
+  const f=440*Math.pow(2,(midi(key)-69)/12), g=ac.createGain();
+  g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(v,t+.004); g.gain.exponentialRampToValueAtTime(.0001,t+1.1);
+  g.connect(master);
+  [[1,1],[3,.22],[6.2,.05]].forEach(([m,a])=>{const o=ac.createOscillator(),og=ac.createGain(); o.frequency.value=f*m; og.gain.value=a; o.connect(og).connect(g); o.start(t); o.stop(t+1.2); track(o);});
+}
+const lat=()=>ac?((ac.outputLatency||ac.baseLatency||0)+S.offset/1000):0;
+
+// ---------- transport ----------
+let state='stopped', segs=[], frozen=0, playFrom=0, countStart=0, nextBeat=0, nextEv=0, holdQ=[], loops=0, curBpm=76, wakeLock=null;
+function posAt(t){let s=segs[0]; for(const x of segs){if(x.t<=t) s=x; else break;} return s.pos+(t-s.t)*s.bpm/60;}
+function bpmAt(t){let s=segs[0]; for(const x of segs){if(x.t<=t) s=x; else break;} return s.bpm;}
+function timeOf(p){const s=segs[segs.length-1]; return s.t+(p-s.pos)*60/s.bpm;}
+function firstEvAt(p){const i=events.findIndex(e=>e.start>=p-1e-9); return i<0?events.length:i;}
+function resetPreview(){R=range(); playFrom=R.start; countStart=R.start-S.countIn; frozen=countStart; loops=0;}
+function play(from){
+  ensureAudio(); stopNodes(); R=range();
+  if(from==null) from=R.start;
+  curBpm=S.bpm[S.song]; playFrom=from; countStart=from-S.countIn;
+  segs=[{t:ac.currentTime+.12,pos:countStart,bpm:curBpm}];
+  nextBeat=Math.ceil(countStart-1e-9); nextEv=firstEvAt(from);
+  holdQ=holds.filter(h=>h>=from&&h<R.end); loops=0; state='playing'; bt.previewing=false;
+  try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(l=>wakeLock=l).catch(()=>{});}catch(e){}
+  ui();
+}
+function pause(){frozen=posAt(ac.currentTime-lat()); state='paused'; stopNodes(); ui();}
+function resumeFromMeasure(){
+  const p=Math.max(frozen,R.start), m=Math.max(R.a,Math.min(R.b,mIndexAt(p)));
+  play(mStart[m]);
+}
+function continueHold(){
+  const h=holdQ.shift(); segs=[{t:ac.currentTime+.05,pos:h,bpm:curBpm}];
+  state='playing'; ui();
+}
+function stop(){state='stopped'; if(ac) stopNodes(); resetPreview(); try{wakeLock&&wakeLock.release();}catch(e){} wakeLock=null; ui();}
+function toggle(){
+  if(state==='playing') pause();
+  else if(state==='paused') resumeFromMeasure();
+  else if(state==='holding') continueHold();
+  else play();
+}
+function schedule(){
+  if(state!=='playing') return;
+  const now=ac.currentTime;
+  while(segs.length>1&&segs[1].t<=now-1) segs.shift();
+  const horizon=posAt(now+.12);
+  let limit=Math.min(horizon,R.playEnd); if(holdQ.length) limit=Math.min(limit,holdQ[0]);
+  while(nextBeat<limit-1e-9){
+    const p=nextBeat;
+    if(S.met&&p<R.clickEnd){const accent=p<playFrom?p===countStart:mSet.has(p); click(timeOf(p),accent);}
+    nextBeat++;
+  }
+  while(nextEv<events.length&&events[nextEv].start<limit-1e-9&&events[nextEv].start<R.end-1e-9){
+    const e=events[nextEv]; if(S.mel&&e.key!=null) bell(timeOf(e.start),e.key); nextEv++;
+  }
+  if(S.loop&&horizon>=R.playEnd&&!holdQ.length){
+    const T=timeOf(R.playEnd); curBpm=Math.min(160,curBpm+S.loopInc); loops++;
+    playFrom=R.start; countStart=R.start-S.countIn;
+    segs.push({t:T,pos:countStart,bpm:curBpm});
+    nextBeat=Math.ceil(countStart-1e-9); nextEv=firstEvAt(R.start);
+    holdQ=holds.filter(h=>h>=R.start&&h<R.end);
+  }
+}
+setInterval(()=>{schedule(); syncBacking();},25);
+function setBpm(v){
+  v=Math.max(30,Math.min(160,Math.round(v))); S.bpm[S.song]=v;
+  if(state==='playing'){
+    const now=ac.currentTime, last=segs[segs.length-1];
+    if(last.t>now) last.bpm=v; else segs.push({t:now,pos:posAt(now),bpm:v});
+  }
+  curBpm=v; save(); ui();
+}
+
+// ---------- canvas ----------
+const cv=document.getElementById('cv'), g=cv.getContext('2d');
+let W=0,H=0,C={},hatch=null,GEO=null;
+const DISP='"Jua","IBM Plex Sans KR","Malgun Gothic",sans-serif', UI='"IBM Plex Sans KR","Malgun Gothic",sans-serif';
+const reduce=matchMedia('(prefers-reduced-motion: reduce)');
+function resize(){const r=cv.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1); W=r.width;H=r.height; cv.width=Math.round(W*d); cv.height=Math.round(H*d); g.setTransform(d,0,0,d,0,0);}
+new ResizeObserver(resize).observe(cv);
+function readColors(){
+  const cs=getComputedStyle(document.documentElement);
+  for(const k of ['stage','lane','grid','ink','muted','left','right','rest','accent','panel','wood','line']) C[k]=cs.getPropertyValue('--'+k).trim();
+  const p=document.createElement('canvas'); p.width=p.height=14; const q=p.getContext('2d');
+  q.strokeStyle=C.rest; q.lineWidth=2; q.beginPath(); q.moveTo(0,14); q.lineTo(14,0); q.moveTo(-4,4); q.lineTo(4,-4); q.moveTo(10,18); q.lineTo(18,10); q.stroke();
+  hatch=g.createPattern(p,'repeat');
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>setTimeout(readColors,0));
+function rr(x,y,w,h,r){r=Math.max(0,Math.min(r,w/2,h/2)); g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath();}
+const handCol=h=>h==='L'?C.left:C.right;
+const beatWord=d=>d===.5?'반 박':d===.25?'반의 반 박':(Number.isInteger(d)?d+'박':d+'박');
+
+function drawTile(e,yt,yb,mx,laneW,ppb){
+  const k=e.key-keyMin, gx=Math.max(3,laneW*.07), x=mx+k*laneW+gx, w=laneW-2*gx;
+  const top=yt+2, bot=yb-2, h=bot-top; if(h<=1) return;
+  const col=S.color==='hand'?handCol(e.hand):NOTE_COLORS[e.key%7];
+  const headH=e.dur>1?Math.min(h,ppb-4):h, r=Math.min(12,w*.18);
+  if(e.dur>1){
+    g.globalAlpha=.2; g.fillStyle=col; rr(x,top,w,h,r); g.fill();
+    g.globalAlpha=.9; g.setLineDash([7,6]); g.strokeStyle=col; g.lineWidth=2; rr(x+1,top+1,w-2,h-2,r); g.stroke(); g.setLineDash([]);
+    const tailH=h-headH, fs=Math.min(20,w*.32);
+    if(tailH>fs*3.6){g.globalAlpha=.85; g.fillStyle=col; g.font=`${fs}px ${DISP}`; g.textAlign='center'; g.textBaseline='middle';
+      const cy=top+tailH/2; ['기','다','려'].forEach((c,i)=>g.fillText(c,x+w/2,cy+(i-1)*fs*1.1));}
+    g.globalAlpha=1;
+  }
+  const hy=bot-headH;
+  g.fillStyle=col; rr(x,hy,w,headH,r); g.fill();
+  g.fillStyle='rgba(255,255,255,.2)'; rr(x+3,hy+3,w-6,Math.min(headH*.32,12),r*.6); g.fill();
+  if(S.color==='note'){const sw=Math.max(6,w*.16); g.fillStyle=handCol(e.hand); rr(e.hand==='L'?x:x+w-sw,hy,sw,headH,Math.min(r,sw/2)); g.fill();}
+  const fs=Math.max(10,Math.min(w*.42,headH*.55,46)), showHand=headH>fs*2.3&&w>30;
+  const cx=x+w/2, ny=showHand?hy+headH*.58:hy+headH/2;
+  g.textAlign='center'; g.textBaseline='middle';
+  g.font=`${fs}px ${DISP}`; g.lineWidth=Math.max(2,fs*.12); g.strokeStyle='rgba(0,0,0,.28)'; g.fillStyle='#fff';
+  const o=Math.floor(e.key/7);
+  if(!S.hideNames) {g.strokeText(noteName(e.key),cx,ny); g.fillText(noteName(e.key),cx,ny);}
+  if(o!==4&&!S.hideNames){g.beginPath(); g.arc(cx,ny+(o>4?-1:1)*fs*.62,Math.max(2.5,fs*.09),0,7); g.fill();}
+  if(showHand){const hs=Math.max(10,fs*.42); g.font=`${hs}px ${DISP}`; g.globalAlpha=.92; g.fillText(e.hand==='L'?'왼손':'오른손',cx,hy+hs*.95); g.globalAlpha=1;}
+  if(e.ferm){g.strokeStyle=C.ink; g.fillStyle=C.ink; g.lineWidth=3; const fy=top-6, fr=Math.min(18,w*.3);
+    g.beginPath(); g.arc(cx,fy,fr,Math.PI,0); g.stroke(); g.beginPath(); g.arc(cx,fy-4,3,0,7); g.fill();}
+}
+function drawRest(e,yt,yb,mx,lw){
+  const top=yt+2,bot=yb-2,h=bot-top; if(h<2) return; const col=e.prep?C.accent:C.rest;
+  g.fillStyle=col; g.globalAlpha=.13; rr(mx,top,lw,h,8); g.fill();
+  if(!e.prep){g.fillStyle=hatch; g.globalAlpha=.45; rr(mx,top,lw,h,8); g.fill();}
+  g.globalAlpha=.9; g.strokeStyle=col; g.lineWidth=2; g.setLineDash([8,6]); rr(mx+1,top+1,lw-2,h-2,8); g.stroke(); g.setLineDash([]);
+  const fs=Math.min(h*.62,38);
+  if(fs>=10){g.globalAlpha=1; g.font=`${fs}px ${DISP}`; g.textAlign='center'; g.textBaseline='middle';
+    const txt=e.prep?'다시 준비 · 하나, 둘':`쉼 · ${beatWord(e.dur)}`+(S.mallet&&e.run&&e.run.e-e.run.s>=1?' · 채 내려':''), tw=g.measureText(txt).width+fs;
+    g.fillStyle=C.stage; rr(mx+lw/2-tw/2,(top+bot)/2-fs*.65,tw,fs*1.3,fs*.4); g.fill();
+    g.fillStyle=col; g.fillText(txt,mx+lw/2,(top+bot)/2+1);}
+  g.globalAlpha=1;
+}
+function rnd(seed){let s=(seed>>>0)||1; return ()=>{s=(s*1664525+1013904223)>>>0; return s/4294967296;};}
+// pop effect: when a tile reaches the line it bursts — the tile swells and fades, one ring and 8 short rays spread out
+function drawFx(pos,mx,laneW,lw,hitY,ppb){
+  const L=.4, gx=Math.max(3,laneW*.07);
+  for(const e of events){
+    if(e.start>pos) break;
+    if(e.key==null||e.start<playFrom-1e-9||e.start>=R.end-1e-9) continue;
+    const dt=pos-e.start; if(dt>L) continue;
+    const p=dt/L, f=1-p, w=laneW-2*gx, cx=mx+(e.key-keyMin+.5)*laneW, col=NOTE_COLORS[e.key%7];
+    const h0=Math.max(24,Math.min(ppb*Math.min(e.dur,1),80)-4), cy=hitY-h0/2, s=1+.55*easeOutP(p);
+    g.globalAlpha=f*f; g.fillStyle=col; rr(cx-w*s/2,cy-h0*s/2,w*s,h0*s,12); g.fill();
+    g.globalAlpha=f; g.strokeStyle='#fff'; g.lineWidth=4*f+1; rr(cx-w*s/2,cy-h0*s/2,w*s,h0*s,12); g.stroke();
+    g.fillStyle=col; g.fillRect(cx-laneW/2+gx*.5,hitY-4,laneW-gx,8);
+    if(!reduce.matches){
+      const r1=w*(.45+.75*easeOutP(p)), r2=r1+w*.28*f;
+      g.strokeStyle=col; g.lineWidth=5*f+1; g.lineCap='round'; g.beginPath(); g.arc(cx,cy,r1,0,7); g.stroke();
+      g.beginPath();
+      for(let i=0;i<8;i++){const a=i*Math.PI/4+Math.PI/8; g.moveTo(cx+Math.cos(a)*(r1+6),cy+Math.sin(a)*(r1+6)); g.lineTo(cx+Math.cos(a)*(r2+6),cy+Math.sin(a)*(r2+6));}
+      g.stroke();
+    }
+  }
+  g.globalAlpha=1;
+}
+const easeOutP=m=>1-(1-m)*(1-m)*(1-m);
+// big mallets, one per hand: they really swing up before each note and come down onto the bar on the hit,
+// so the motion itself is the cue (readable from the back row). Long rests lay the mallet down in grey.
+function longRestAt(p){for(const e of events){if(e.start>p) break; if(p<e.start+e.dur) return e.key==null&&!e.prep&&e.run&&e.run.e-e.run.s>=1;} return false;}
+function drawMallets(pos,mx,laneW,hitY,ppb,resting){
+  const hr=Math.max(16,Math.min(laneW*.36,42)), maxH=Math.max(70,Math.min(hitY*.5,280));
+  const SL=Math.max(110,Math.min(hitY*.5,300)), lx=e=>mx+(e.key-keyMin+.5)*laneW;
+  const ended=R.full&&pos>=lastNoteEnd, easeOut=m=>1-(1-m)*(1-m), restY=H-hr-8, yOfH=h=>hitY-hr*.85-h*maxH;
+  for(const hand of (S.hand==='right'?['R']:['L','R'])){
+    let prev=null,next=null;
+    for(const e of events){
+      if(e.key==null||e.hand!==hand||e.start<playFrom-1e-9||e.start>=R.end-1e-9) continue;
+      if(e.start<=pos) prev=e; else {next=e; break;}
+    }
+    if(!prev&&!next) continue;
+    // right after striking, glide over to the next bar and wait there
+    let x=prev?lx(prev):lx(next), y=yOfH(.12), down=false, trail=0;
+    if(prev&&next){
+      const ms=prev.start+.12, me=Math.max(ms+.05,Math.min(ms+.35,next.start-.1)), m=Math.max(0,Math.min(1,(pos-ms)/(me-ms)));
+      x=lx(prev)+(lx(next)-lx(prev))*easeOut(m);
+    }
+    if(next&&pos>=next.start-next.up&&state!=='stopped'){
+      const u=(pos-(next.start-next.up))/next.up, amp=.4+.6*Math.min(1,next.up), m=Math.min(1,u/.6);
+      const y0=longRestAt(next.start-next.up)?restY:yOfH(.12);
+      if(u<.6) y=y0+(yOfH(amp)-y0)*easeOut(m);
+      else {const v=(u-.6)/.4; y=yOfH(amp*(1-v*v)); trail=v;}
+    } else if(prev&&pos-prev.start<.3) y=yOfH(.18*Math.sin(Math.PI*(pos-prev.start)/.3));
+    else if(resting||ended||!next){down=true; y=restY;}
+    const col=down?C.rest:handCol(hand), dir=hand==='L'?-1:1;
+    const hf=Math.max(0,Math.min(1,(hitY-y)/maxH)), a=(down?62:38-26*hf)*Math.PI/180;
+    const gxp=x+dir*SL*Math.cos(a), gyp=y+SL*Math.sin(a);
+    if(!down){g.globalAlpha=.12+.28*(1-hf); g.fillStyle=C.ink; g.beginPath(); g.ellipse(x,hitY+4,hr*(1.3-.6*hf),hr*.32,0,0,7); g.fill();}
+    if(trail>0&&!reduce.matches) for(let i=1;i<=2;i++){g.globalAlpha=.16*trail/i; g.fillStyle=col; g.beginPath(); g.arc(x,y-i*hr*.9*trail,hr,0,7); g.fill();}
+    g.globalAlpha=down?.6:1; g.lineCap='round';
+    g.strokeStyle=C.wood; g.lineWidth=Math.max(7,hr*.32); g.beginPath(); g.moveTo(x,y); g.lineTo(gxp,gyp); g.stroke();
+    g.strokeStyle=C.ink; g.lineWidth=Math.max(10,hr*.46); g.beginPath();
+    g.moveTo(x+(gxp-x)*.68,y+(gyp-y)*.68); g.lineTo(gxp,gyp); g.stroke();
+    g.fillStyle=col; g.strokeStyle='#fff'; g.lineWidth=4; g.beginPath(); g.arc(x,y,hr,0,7); g.fill(); g.stroke();
+    g.fillStyle='rgba(255,255,255,.4)'; g.beginPath(); g.arc(x-hr*.32,y-hr*.32,hr*.34,0,7); g.fill();
+    g.globalAlpha=1;
+  }
+}
+function bigMsg(main,sub,col,y,scale=1){
+  const fs=Math.min(H*.15,W*.13,120)*scale, sfs=Math.max(14,fs*.28);
+  g.font=`${fs}px ${DISP}`; const w1=g.measureText(main).width; g.font=`${sfs}px ${DISP}`; const w2=sub?g.measureText(sub).width:0;
+  const pw=Math.min(W-24,Math.max(w1,w2)+fs*.8), ph=fs*1.15+(sub?sfs*1.5:0);
+  g.globalAlpha=.9; g.fillStyle=C.panel; rr(W/2-pw/2,y-ph/2,pw,ph,18); g.fill(); g.globalAlpha=1;
+  g.strokeStyle=col; g.lineWidth=3; rr(W/2-pw/2,y-ph/2,pw,ph,18); g.stroke();
+  g.textAlign='center'; g.textBaseline='middle';
+  g.fillStyle=col; g.font=`${fs}px ${DISP}`; g.fillText(main,W/2,y-ph/2+fs*.62);
+  if(sub){g.fillStyle=C.ink; g.font=`${sfs}px ${DISP}`; g.fillText(sub,W/2,y+ph/2-sfs*.95);}
+}
+function chip(txt,col,x,y,fs){
+  g.font=`${fs}px ${DISP}`; const w=g.measureText(txt).width+fs*1.1;
+  g.fillStyle=col; rr(x-w/2,y-fs*.75,w,fs*1.5,fs*.75); g.fill();
+  g.fillStyle='#fff'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(txt,x,y+1);
+}
+
+function draw(pos){
+  if(!W||!H||!keys.length) return;
+  const N=keys.length, xyH=Math.max(80,Math.min(210,H*.25)), hitY=H-xyH-12;
+  const mx=Math.max(10,W*.025), laneW=(W-2*mx)/N, lw=laneW*N, hudH=52;
+  const ppb=(hitY-hudH*.4)/S.look, yOf=p=>hitY-(p-pos)*ppb, running=state==='playing';
+  GEO={mx,laneW,hitY,ppb,pos}; cv.style.cursor=running?'default':'pointer';
+  g.fillStyle=C.stage; g.fillRect(0,0,W,H);
+  g.fillStyle=C.lane; for(let k=0;k<N;k+=2) g.fillRect(mx+k*laneW,0,laneW,hitY);
+  // beat grid
+  for(let b=Math.floor(pos);b<=pos+S.look+1;b++){
+    const y=yOf(b); if(y<0||y>hitY) continue;
+    const down=b<playFrom?b===countStart:mSet.has(b);
+    g.fillStyle=C.grid; g.globalAlpha=down?.85:.3; g.fillRect(mx,y-(down?1.5:.5),lw,down?3:1);
+    if(down&&b>=playFrom&&b<R.end){g.globalAlpha=.9; g.fillStyle=C.muted; g.font=`600 13px ${UI}`; g.textAlign='left'; g.textBaseline='bottom'; g.fillText((mIndexAt(b)+1)+'마디',mx+6,y-4);}
+  }
+  g.globalAlpha=1;
+  // tiles
+  g.save(); g.beginPath(); g.rect(0,0,W,hitY); g.clip();
+  for(const e of events){
+    if(e.start>pos+S.look+.5) break;
+    if(e.start<playFrom-1e-9||e.start>=R.end-1e-9) continue;
+    const yb=yOf(e.start), yt=yOf(e.start+e.dur); if(yt>hitY) continue;
+    if(e.key==null) drawRest(e,yt,yb,mx,lw); else drawTile(e,yt,yb,mx,laneW,ppb);
+  }
+  g.restore();
+  // current context
+  let cur=null; if(pos>=playFrom) for(const e of events){if(e.start>pos+1e-9) break; if(pos<e.start+e.dur){cur=e;}}
+  if(cur&&cur.start>=R.end) cur=null;
+  const inRest=cur&&cur.key==null&&!cur.prep&&(running||state==='holding');
+  const longRest=inRest&&cur.run.e-cur.run.s>=1;
+  // hit line with beat pulse
+  const bt=Math.floor(pos), frac=pos-bt, isDown=bt<playFrom?bt===countStart:mSet.has(bt);
+  const pulse=running&&!(R.full&&pos>=lastNoteEnd)?Math.max(0,1-frac*3.2):0;
+  g.fillStyle=inRest?C.rest:isDown?C.accent:C.ink; g.globalAlpha=.4+.6*pulse;
+  g.fillRect(mx,hitY-2-pulse*3,lw,4+pulse*6); g.globalAlpha=1;
+  // xylophone
+  const xt=hitY+10, xh=H-8-xt, gx=Math.max(3,laneW*.07);
+  const barH=k=>xh*(1-.32*(N>1?k/(N-1):0)), barY=k=>xt+(xh-barH(k))/2;
+  g.strokeStyle=C.wood; g.lineWidth=7; g.lineCap='round';
+  for(const f of [.17,.83]){g.beginPath(); g.moveTo(mx+laneW*.1,barY(-.4)+barH(-.4)*f); g.lineTo(mx+lw-laneW*.1,barY(N-.6)+barH(N-.6)*f); g.stroke();}
+  const glow=new Map(), ringing=new Set();
+  if(pos>=playFrom) for(const e of events){
+    if(e.start>pos) break; if(e.key==null||e.start<playFrom||e.start>=R.end) continue;
+    const dt=pos-e.start; if(dt<.45) glow.set(e.key,{i:1-dt/.45,h:e.hand}); if(dt<e.dur) ringing.add(e.key);
+  }
+  let next=null; if(running||state==='holding') for(const e of events){if(e.start>pos+1e-6&&e.key!=null&&e.start>=playFrom&&e.start<R.end){next=e;break;}}
+  for(let k=0;k<N;k++){
+    const key=keyMin+k, used=keys.used.has(key), lift=glow.has(key)?glow.get(key).i*5:0;
+    const bx=mx+k*laneW+gx*.6, bw=laneW-gx*1.2, by=barY(k)+lift*.8, bh=barH(k);
+    g.globalAlpha=used?1:.3; g.fillStyle=NOTE_COLORS[key%7]; rr(bx,by,bw,bh,Math.min(8,bw*.15)); g.fill();
+    g.fillStyle='rgba(255,255,255,.22)'; rr(bx+3,by+3,bw-6,bh*.12,4); g.fill();
+    g.fillStyle='rgba(0,0,0,.32)'; for(const f of [.17,.83]){g.beginPath(); g.arc(bx+bw/2,by+bh*f,Math.max(2.5,bw*.05),0,7); g.fill();}
+    const fs=Math.max(11,Math.min(bw*.46,bh*.3,34)); g.textAlign='center'; g.textBaseline='middle';
+    g.font=`${fs}px ${DISP}`; g.lineWidth=Math.max(2,fs*.14); g.strokeStyle='rgba(0,0,0,.35)'; g.fillStyle='#fff';
+    if(S.hideNames<2){g.strokeText(noteName(key),bx+bw/2,by+bh*.5); g.fillText(noteName(key),bx+bw/2,by+bh*.5);}
+    const ow=octWord(key); if(ow&&S.hideNames<2){const s2=Math.max(10,fs*.42); g.font=`${s2}px ${DISP}`; g.lineWidth=3; g.strokeText(ow,bx+bw/2,by+bh*.5-fs*.82); g.fillText(ow,bx+bw/2,by+bh*.5-fs*.82);}
+    g.globalAlpha=1;
+    if(glow.has(key)){const G=glow.get(key); g.globalAlpha=.55*G.i; g.fillStyle='#fff'; rr(bx,by,bw,bh,8); g.fill();
+      g.globalAlpha=G.i; g.strokeStyle=handCol(G.h); g.lineWidth=5; rr(bx-3,by-3,bw+6,bh+6,10); g.stroke();
+      g.globalAlpha=1;
+    } else if(ringing.has(key)){g.strokeStyle=C.ink; g.globalAlpha=.35; g.lineWidth=3; rr(bx-2,by-2,bw+4,bh+4,10); g.stroke(); g.globalAlpha=1;}
+    if(!S.mallet&&next&&next.key===key&&next.start-pos<=1&&!glow.has(key)){
+      g.globalAlpha=Math.max(.25,1-(next.start-pos)); g.strokeStyle=handCol(next.hand); g.lineWidth=4; g.setLineDash([6,5]);
+      rr(bx-4,by-4,bw+8,bh+8,11); g.stroke(); g.setLineDash([]); g.globalAlpha=1;
+    }
+  }
+  if(S.hand==='zone'){
+    const sk=S.split[S.song]-keyMin;
+    if(sk>0&&sk<N){const sx=mx+sk*laneW; g.strokeStyle=C.ink; g.globalAlpha=.55; g.lineWidth=2; g.setLineDash([5,5]);
+      g.beginPath(); g.moveTo(sx,xt-4); g.lineTo(sx,H-6); g.stroke(); g.setLineDash([]); g.globalAlpha=1;
+      const fs=Math.max(12,Math.min(18,laneW*.3)); chip('◀ 왼손',C.left,sx-fs*3.2,H-8-fs*.9,fs); chip('오른손 ▶',C.right,sx+fs*3.6,H-8-fs*.9,fs);}
+  }
+  if(longRest){g.fillStyle=C.stage; g.globalAlpha=.45; g.fillRect(mx,xt-6,lw,H-xt); g.globalAlpha=1;}
+  if(state!=='stopped'&&state!=='ended') drawFx(pos,mx,laneW,lw,hitY,ppb);
+  if(S.mallet&&state!=='ended') drawMallets(pos,mx,laneW,hitY,ppb,longRest);
+  // HUD
+  g.fillStyle=C.panel; g.globalAlpha=.86; g.fillRect(0,0,W,hudH); g.globalAlpha=1;
+  g.fillStyle=C.line; g.fillRect(0,hudH,W,1);
+  const mi=mIndexAt(Math.max(pos,playFrom)), secs=SONGS[S.song].sections; let sec=secs[0][1]; for(const s of secs) if(s[0]<=mi) sec=s[1];
+  g.textAlign='left'; g.textBaseline='middle'; g.fillStyle=C.ink; g.font=`26px ${DISP}`;
+  const mtxt=pos<playFrom?'준비':`${mi+1}마디`; g.fillText(mtxt,16,hudH/2+1);
+  const mw=g.measureText(mtxt).width; g.font=`16px ${DISP}`; g.fillStyle=C.muted; g.fillText(`/ ${mStart.length} · ${sec}`,24+mw,hudH/2+2);
+  // beat dots
+  let bi=-1, nb=4;
+  if(pos<playFrom){bi=Math.floor(pos-countStart); nb=Math.max(1,Math.min(4,S.countIn)); bi=bi%nb;}
+  else if(cur&&cur.prep){bi=Math.floor(pos-cur.start); nb=2;}
+  else if(pos<R.end) bi=Math.floor(pos-mStart[mi]);
+  if(state==='stopped'||state==='ended') bi=-1;
+  const dr=11, gap=34, dx0=W/2-(nb-1)*gap/2;
+  for(let i=0;i<nb;i++){const on=i===bi; g.beginPath(); g.arc(dx0+i*gap,hudH/2,on?dr+2:dr*.7,0,7);
+    g.fillStyle=on?(i===0?C.accent:C.ink):C.line; g.fill();}
+  if(W>620){
+    g.textAlign='right'; g.font=`20px ${DISP}`; g.fillStyle=C.ink;
+    const shown=running?Math.round(bpmAt(ac.currentTime-lat())):curBpm;
+    g.fillText(`♩=${shown}`,W-16,hudH/2+1); const bw2=g.measureText(`♩=${shown}`).width;
+    g.font=`17px ${DISP}`;
+    if(S.hand!=='right'){let x=W-32-bw2; for(const [t,c] of [['오른손',C.right],['왼손',C.left]]){g.fillStyle=C.ink; g.fillText(t,x,hudH/2+1); const tw=g.measureText(t).width; g.fillStyle=c; rr(x-tw-26,hudH/2-9,18,18,5); g.fill(); x-=tw+40;}}
+  }
+  // big cues
+  const cy=Math.max(hudH+70,hitY*.42);
+  const KOR=['하나','둘','셋','넷','다섯','여섯','일곱','여덟'];
+  if(state==='stopped') bigMsg('▶ 시작','스페이스바 · 타일을 누르면 왼손↔오른손 바꾸기',C.muted,cy,.6);
+  else if(state==='ended') bigMsg('잘했어요!','끝까지 멈춤 성공',C.accent,cy,.8);
+  else if(state==='paused') bigMsg('잠깐 멈춤',`스페이스바: ${mIndexAt(Math.max(frozen,R.start))+1}마디 처음부터 다시`,C.muted,cy,.6);
+  else if(state==='holding') bigMsg('⌒ 늘임표','선생님 손을 보세요 · 스페이스바로 계속',C.accent,cy,.8);
+  else if(pos<playFrom){const n=Math.floor(pos-countStart); if(n>=0) bigMsg(KOR[n]||String(n+1),loops?`다시 한 번 · ${loops+1}번째 · ♩=${curBpm}`:'연주 준비!',n===0?C.accent:C.ink,cy);}
+  else if(cur&&cur.prep){const n=Math.floor(pos-cur.start); bigMsg(KOR[n]||'둘','다시 시작 준비',C.accent,cy);}
+  else if(R.full&&pos>=lastNoteEnd){pos<lastNoteEnd+2.5?bigMsg('그대로 멈춰요','소리가 사라질 때까지 멈춤',C.right,cy,.8):bigMsg('인사!','다 같이 꾸벅',C.accent,cy,.8);}
+  else if(R.full&&pos>=lastNote.start) bigMsg('마지막 음!','치고 그대로 멈춰요',C.right,cy,.7);
+  else if(cur&&cur.fermExt){const left=cur.start+cur.dur-pos;
+    left>2?bigMsg('⌒ 길게~','소리를 들으며 기다려요',C.accent,cy,.75):bigMsg(KOR[Math.min(1,Math.floor(2-left))],'다시 시작!',C.accent,cy,.75);}
+  else if(longRest){const left=cur.next-pos;
+    if(left<=1) bigMsg('준비!',(S.hideNames?'다음: ':`다음: ${octWord(next?next.key:0)} ${next?noteName(next.key):''} · `)+`${next&&next.hand==='L'?'왼손':'오른손'}`.replace('  ',' '),C.accent,cy,.75);
+    else bigMsg('쉬어요',`다음 음까지 ${Math.ceil(left-1e-6)}박`,C.rest,cy,.75);}
+  else if(inRest) chip('쉼!',C.rest,W/2,hitY-26,22);
+  if(running&&R.full&&pos>=playFrom&&lastNote.start-pos>0&&lastNote.start-pos<=4) chip(`마지막 음까지 ${Math.ceil(lastNote.start-pos-1e-6)}박`,C.right,W/2,hudH+24,18);
+}
+function frame(){
+  requestAnimationFrame(frame);
+  let pos=frozen;
+  if(state==='playing'){
+    pos=posAt(ac.currentTime-lat());
+    if(holdQ.length&&pos>=holdQ[0]){state='holding'; frozen=holdQ[0]; pos=frozen; ui();}
+    else if(!S.loop&&pos>=R.playEnd){state=R.full?'ended':'stopped'; frozen=R.full?R.playEnd:R.start-S.countIn; pos=frozen; if(!R.full) playFrom=R.start; ui();}
+  }
+  const mi=pos>=playFrom?mIndexAt(pos):-1;
+  if(mi!==curMeasure){curMeasure=mi; strip.querySelectorAll('.mb').forEach((b,i)=>b.classList.toggle('cur',i===mi&&state!=='stopped'));}
+  draw(pos);
+}
+
+// ---------- UI ----------
+const $=id=>document.getElementById(id), strip=$('strip');
+let curMeasure=-2, dragging=false;
+function buildStrip(){
+  const s=SONGS[S.song]; strip.innerHTML='';
+  mStart.forEach((_,i)=>{
+    let si=0; s.sections.forEach((x,j)=>{if(x[0]<=i) si=j;});
+    const lab=s.sections.find(x=>x[0]===i), b=document.createElement('button');
+    b.className='mb'; b.dataset.i=i; b.dataset.sec=si%4; b.title=`${i+1}마디부터`;
+    b.innerHTML=(lab?`<span class="sl">${lab[1]}</span>`:'')+`<span>${i+1}</span>`; strip.appendChild(b);
+  });
+  paintSel();
+}
+function paintSel(){
+  const a=Math.min(selA,selB), b=Math.max(selA,selB), n=mStart.length;
+  strip.querySelectorAll('.mb').forEach((el,i)=>el.classList.toggle('out',i<a||i>b));
+  $('selInfo').textContent=(a===0&&b===n-1)?'곡 전체':`${a+1}~${b+1}마디`;
+}
+function applySel(){if(state!=='stopped'&&state!=='ended'){state='stopped'; if(ac) stopNodes();} paintSel(); resetPreview(); state='stopped'; ui();}
+let moved=false;
+strip.addEventListener('pointerdown',ev=>{const b=ev.target.closest('.mb'); if(!b) return; ev.preventDefault(); dragging=true; moved=false; selA=+b.dataset.i; selB=mStart.length-1; try{strip.setPointerCapture(ev.pointerId);}catch(e){} applySel();});
+strip.addEventListener('pointermove',ev=>{if(!dragging) return; const el=document.elementFromPoint(ev.clientX,ev.clientY), b=el&&el.closest&&el.closest('.mb'); if(!b) return; const i=+b.dataset.i; if(i!==selA) moved=true; if(moved&&i!==selB){selB=i; applySel();}});
+addEventListener('pointerup',()=>dragging=false);
+$('allBtn').onclick=()=>{selA=0; selB=mStart.length-1; applySel();};
+
+function segBind(id,key,after){
+  const el=$(id);
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{let v=b.dataset.v; if(/^-?\d+$/.test(v)) v=+v; S[key]=v; save(); after&&after(); ui();});
+}
+segBind('ciSeg','countIn',()=>{if(state==='stopped') resetPreview();});
+segBind('handSeg','hand',assignHands);
+$('resetHands').onclick=()=>{S.over[S.song]={}; save(); assignHands(); ui();};
+// click a tile while stopped/paused to flip that note between left and right hand
+cv.addEventListener('click',ev=>{
+  if(state==='playing'||!GEO) return;
+  const r=cv.getBoundingClientRect(), x=ev.clientX-r.left, y=ev.clientY-r.top;
+  for(const e of events){
+    if(e.key==null||e.start<playFrom-1e-9||e.start>=R.end-1e-9) continue;
+    const yb=GEO.hitY-(e.start-GEO.pos)*GEO.ppb, yt=yb-e.dur*GEO.ppb, x0=GEO.mx+(e.key-keyMin)*GEO.laneW;
+    if(x>=x0&&x<=x0+GEO.laneW&&y>=Math.max(0,yt)&&y<=Math.min(yb,GEO.hitY)){
+      const o=S.over[S.song]; o[e.ni]=e.hand==='L'?'R':'L'; save(); assignHands(); ui(); break;
+    }
+  }
+});
+segBind('colSeg','color'); segBind('malSeg','mallet'); segBind('hideSeg','hideNames');
+const HIDE_LABEL=['계이름: 보이기','계이름: 음만 가림','계이름: 모두 가림'];
+function cycleHide(){S.hideNames=(S.hideNames+1)%3; save(); ui();}
+$('hideBtn').onclick=cycleHide; segBind('nameSeg','names',fillSplit); segBind('incSeg','loopInc');
+segBind('fermSeg','ferm',rebuildAll); segBind('extSeg','fermExt',rebuildAll);
+function rebuildAll(){stop(); build(); buildStrip(); fillSplit(); resetPreview(); ui();}
+$('fermBtn').onclick=()=>{S.ferm=S.ferm==='hold'?'extend':'hold'; save(); rebuildAll();};
+function fillSplit(){
+  const sel=$('splitSel'); sel.innerHTML='';
+  keys.forEach(k=>{if(k===keyMin) return; const o=document.createElement('option'); o.value=k; o.textContent=`${octWord(k)} ${noteName(k)}`.trim()+'부터 오른손'; sel.appendChild(o);});
+  sel.value=S.split[S.song];
+}
+$('splitSel').onchange=e=>{S.split[S.song]=+e.target.value; assignHands(); save();};
+$('songSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(S.song===b.dataset.song) return; S.song=b.dataset.song; save(); stop(); loadBacking(S.song); build(); selA=0; selB=mStart.length-1; buildStrip(); fillSplit(); resetPreview(); ui();});
+$('playBtn').onclick=toggle; $('stopBtn').onclick=stop;
+$('bpmDown').onclick=()=>setBpm(S.bpm[S.song]-2); $('bpmUp').onclick=()=>setBpm(S.bpm[S.song]+2);
+$('bpmRange').oninput=e=>setBpm(+e.target.value);
+$('metBtn').onclick=()=>{S.met=!S.met; save(); ui();};
+$('melBtn').onclick=()=>{S.mel=!S.mel; save(); ui();};
+$('loopChk').onchange=e=>{S.loop=e.target.checked; save();};
+$('lookRange').oninput=e=>{S.look=+e.target.value; save(); ui();};
+$('metVol').oninput=e=>{S.metVol=+e.target.value; save();};
+$('melVol').oninput=e=>{S.melVol=+e.target.value; save();};
+$('offRange').oninput=e=>{S.offset=+e.target.value; save(); ui();};
+function openPanel(id){
+  for(const [pid,bid] of [['panel','setBtn'],['btPanel','btBtn']]){
+    const p=$(pid), open=pid===id&&p.hidden; p.hidden=!open; $(bid).setAttribute('aria-expanded',String(open));
+    if(bid==='setBtn') $(bid).classList.toggle('on',open);
+  }
+}
+$('setBtn').onclick=()=>openPanel('panel'); $('btBtn').onclick=()=>openPanel('btPanel');
+function fullscreen(){const el=$('app'); try{if(document.fullscreenElement) document.exitFullscreen(); else el.requestFullscreen().catch(()=>{});}catch(e){}}
+$('fsBtn').onclick=fullscreen;
+$('themeBtn').onclick=()=>{const dark=getComputedStyle(document.documentElement).getPropertyValue('--stage').trim().toLowerCase()==='#0a0f18';
+  document.documentElement.dataset.theme=dark?'light':'dark'; readColors();};
+function ui(){
+  const pb=$('playBtn');
+  pb.textContent=state==='playing'?'❚❚ 멈춤':state==='paused'?'▶ 이어서':state==='holding'?'▶ 계속':'▶ 시작';
+  $('bpmNum').textContent=S.bpm[S.song]; $('bpmRange').value=S.bpm[S.song];
+  $('metBtn').classList.toggle('on',S.met); $('melBtn').classList.toggle('on',S.mel);
+  $('metBtn').textContent='♩ 메트로놈 '+(S.met?'켜짐':'꺼짐'); $('melBtn').textContent='♪ 음 소리 '+(S.mel?'켜짐':'꺼짐');
+  $('metBtn').setAttribute('aria-pressed',String(S.met)); $('melBtn').setAttribute('aria-pressed',String(S.mel));
+  $('loopChk').checked=S.loop; $('lookRange').value=S.look; $('lookVal').textContent=S.look;
+  $('metVol').value=S.metVol; $('melVol').value=S.melVol; $('offRange').value=S.offset; $('offVal').textContent=S.offset;
+  $('songSeg').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.song===S.song)));
+  for(const [id,key] of [['ciSeg','countIn'],['handSeg','hand'],['colSeg','color'],['malSeg','mallet'],['hideSeg','hideNames'],['nameSeg','names'],['fermSeg','ferm'],['extSeg','fermExt'],['incSeg','loopInc']])
+    $(id).querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(String(S[key])===b.dataset.v)));
+  $('splitRow').hidden=S.hand!=='zone';
+  $('hideBtn').textContent=HIDE_LABEL[S.hideNames]||HIDE_LABEL[0]; $('hideBtn').classList.toggle('on',S.hideNames>0);
+  const fb=$('fermBtn'); fb.hidden=!SONGS[S.song].m.some(s=>s.includes('^')); fb.disabled=btActive();
+  fb.textContent=btActive()?'늘임표: 자동 (반주)':S.ferm==='hold'?'늘임표: 선생님 신호':'늘임표: 자동 이어가기';
+  $('btBtn').classList.toggle('on',btActive()); $('btBtn').textContent=btActive()?'♫ 반주 켜짐':'♫ 반주';
+  btUI();
+  if(state!=='playing') curBpm=S.bpm[S.song];
+}
+addEventListener('keydown',e=>{
+  if(e.target.tagName==='SELECT'||(e.target.tagName==='INPUT'&&e.target.type!=='checkbox'&&e.target.type!=='range')) return;
+  const k=e.key;
+  if(k===' '){e.preventDefault(); toggle();}
+  else if(k==='ArrowUp'){e.preventDefault(); setBpm(S.bpm[S.song]+2);}
+  else if(k==='ArrowDown'){e.preventDefault(); setBpm(S.bpm[S.song]-2);}
+  else if(k==='ArrowLeft'||k==='ArrowRight'){e.preventDefault(); const n=mStart.length, a=Math.min(selA,selB), b=Math.max(selA,selB), d=k==='ArrowLeft'?-1:1;
+    const na=Math.max(0,Math.min(n-1,a+d)); selA=na; selB=Math.max(na,b); applySel();}
+  else if(k==='r'||k==='R') stop();
+  else if(k==='m'||k==='M'){S.met=!S.met; save(); ui();}
+  else if(k==='n'||k==='N'){S.mel=!S.mel; save(); ui();}
+  else if(k==='h'||k==='H') cycleHide();
+  else if(k==='f'||k==='F') fullscreen();
+});
+addEventListener('keyup',e=>{if(e.key===' ') e.preventDefault();});
+
+// ---------- backing track ----------
+// An <audio> element keeps the pitch when slowed down; it follows the tile clock and is re-seeked if it drifts.
+const bt={el:new Audio(),ready:false,name:'',url:null,lastSeek:0,previewing:false};
+bt.el.preload='auto'; bt.el.preservesPitch=true; bt.el.mozPreservesPitch=true; bt.el.webkitPreservesPitch=true;
+const btCfg=()=>S.bt[S.song], btActive=()=>bt.ready&&!!btCfg().on;
+function fermMode(){return btActive()?'extend':S.ferm;}
+function firstNoteStart(){const e=events.find(x=>x.key!=null); return e?e.start:0;}
+function audioT(p){const c=btCfg(); return c.first+(p-firstNoteStart())*60/c.bpm;}
+function syncBacking(){
+  if(bt.previewing) return;
+  const el=bt.el;
+  if(!btActive()||!(state==='playing'||state==='ended')){if(!el.paused) el.pause(); return;}
+  if(state==='ended') return; // let the outro ring out
+  const t=ac.currentTime, pos=posAt(t), want=audioT(pos), rate=Math.max(.25,Math.min(4,bpmAt(t)/btCfg().bpm));
+  el.volume=S.btVol;
+  if(Math.abs(el.playbackRate-rate)>.001) el.playbackRate=rate;
+  if(want<0||(el.duration&&want>=el.duration)){if(!el.paused) el.pause(); return;}
+  const now=performance.now();
+  if(el.paused){el.currentTime=want; el.play().catch(()=>{}); bt.lastSeek=now; return;}
+  if(now-bt.lastSeek>500&&Math.abs(el.currentTime-want)>.1*Math.max(1,rate)){el.currentTime=want; bt.lastSeek=now;}
+}
+function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('xylo-tiles',1); r.onupgradeneeded=()=>r.result.createObjectStore('bt'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);});}
+async function idbDo(mode,fn){try{const db=await idb(); return await new Promise((res,rej)=>{const tx=db.transaction('bt',mode), q=fn(tx.objectStore('bt')); tx.oncomplete=()=>res(q&&q.result); tx.onerror=()=>rej(tx.error);});}catch(e){return null;}}
+function stopPreview(){if(bt.previewing){bt.el.pause(); bt.previewing=false;}}
+function setBlob(blob,name){
+  stopPreview(); if(bt.url){URL.revokeObjectURL(bt.url); bt.url=null;}
+  bt.ready=false; bt.name=name||'';
+  if(!blob){bt.el.removeAttribute('src'); bt.el.load(); ui(); return;}
+  bt.url=URL.createObjectURL(blob); bt.el.src=bt.url; bt.el.load(); ui();
+}
+let loadToken=0;
+async function loadBacking(song){
+  const my=++loadToken; setBlob(null,'');
+  const rec=await idbDo('readonly',st=>st.get(song));
+  if(my===loadToken&&rec&&rec.blob) setBlob(rec.blob,rec.name);
+}
+bt.el.addEventListener('loadedmetadata',()=>{bt.ready=true; rebuildAll();});
+bt.el.addEventListener('error',()=>{if(bt.name&&bt.el.getAttribute('src')){bt.ready=false; bt.name+=' (이 브라우저에서 재생할 수 없는 파일이에요)'; ui();}});
+bt.el.addEventListener('timeupdate',()=>{if(bt.previewing) btUI();});
+bt.el.addEventListener('ended',()=>{bt.previewing=false; btUI();});
+function preview(from){
+  if(!bt.ready) return; if(state!=='stopped') stop();
+  const el=bt.el; el.playbackRate=1; el.volume=S.btVol; el.currentTime=Math.max(0,from); el.play().catch(()=>{});
+  bt.previewing=true; btUI();
+}
+function btUI(){
+  const c=btCfg(), first=events.find(e=>e.key!=null);
+  $('btTitle').textContent=`${SONGS[S.song].title} 반주`;
+  $('btName').textContent=bt.name?`불러온 파일: ${bt.name}${bt.ready||bt.name.includes('(')?'':' · 불러오는 중…'}`:'아직 반주 파일이 없어요.';
+  $('btDel').disabled=!bt.name;
+  $('btOnSeg').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(String(c.on)===b.dataset.v)));
+  $('btFirstVal').textContent=c.first.toFixed(2);
+  if(document.activeElement!==$('btBpm')) $('btBpm').value=c.bpm;
+  $('btVol').value=S.btVol;
+  $('btFirstHint').textContent=`듣다가 멜로디 첫 음(${first?octWord(first.key)+' '+noteName(first.key):''})이 나오는 순간 "지금이 첫 음!"을 누르세요.`.replace('( ','(');
+  $('btPrev').textContent=bt.previewing?`❚❚ 멈춤 · ${bt.el.currentTime.toFixed(1)}초`:'▶ 처음부터 듣기';
+  for(const id of ['btPrev','btMark','btCheck','btTap']) $(id).disabled=!bt.ready;
+}
+$('btFile').onchange=async e=>{const f=e.target.files[0]; if(!f) return; loadToken++; btCfg().on=1; save(); setBlob(f,f.name); e.target.value='';
+  await idbDo('readwrite',st=>st.put({blob:f,name:f.name},S.song));};
+$('btDel').onclick=async()=>{loadToken++; setBlob(null,''); await idbDo('readwrite',st=>st.delete(S.song)); rebuildAll();};
+$('btOnSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{btCfg().on=+b.dataset.v; save(); rebuildAll();});
+$('btPrev').onclick=()=>{if(bt.previewing){stopPreview(); btUI();} else preview(0);};
+$('btMark').onclick=()=>{if(!bt.previewing) return; btCfg().first=Math.round(bt.el.currentTime*100)/100; save(); btUI();};
+$('btCheck').onclick=()=>preview(btCfg().first-3);
+document.querySelectorAll('[data-nudge]').forEach(b=>b.onclick=()=>{const c=btCfg(); c.first=Math.max(0,Math.round((c.first+parseFloat(b.dataset.nudge))*100)/100); save(); btUI();});
+let taps=[];
+$('btTap').onclick=()=>{const t=performance.now(); if(taps.length&&t-taps[taps.length-1]>2000) taps=[]; taps.push(t);
+  if(taps.length>=4){const iv=(taps[taps.length-1]-taps[0])/(taps.length-1); btCfg().bpm=Math.round(600000/iv)/10; save();}
+  $('btTap').textContent=`박에 맞춰 탭 (${taps.length})`; btUI();};
+$('btBpm').onchange=e=>{const v=parseFloat(e.target.value); if(v>=20&&v<=300){btCfg().bpm=v; save();} btUI();};
+$('btHalf').onclick=()=>{const c=btCfg(); c.bpm=Math.max(20,Math.round(c.bpm*5)/10); save(); btUI();};
+$('btDouble').onclick=()=>{const c=btCfg(); c.bpm=Math.min(300,c.bpm*2); save(); btUI();};
+$('btVol').oninput=e=>{S.btVol=+e.target.value; bt.el.volume=S.btVol; save();};
+
+loadBacking(S.song);
+readColors(); build(); selA=0; selB=mStart.length-1; buildStrip(); fillSplit(); resetPreview(); ui();
+if(document.fonts&&document.fonts.load) document.fonts.load('40px Jua').catch(()=>{});
+requestAnimationFrame(frame);
+</script>
