@@ -71,7 +71,13 @@ label.chk input{width:18px;height:18px;accent-color:var(--accent)}
 .row input[type=number]{width:84px;font:600 15px var(--font-ui);padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
 .row input[type=file]{font:14px var(--font-ui);max-width:100%}
 .row .bar{gap:6px 8px}
-#panel,#btPanel{position:absolute;right:0;top:56px;z-index:5;width:min(380px,100%);max-height:calc(100% - 70px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px rgba(10,20,40,.18);padding:16px;display:grid;gap:14px}
+#listPanel h2{font:20px var(--font-disp);margin:0}
+.hlist{margin:0;padding-left:22px;display:grid;gap:6px;font-size:14px;line-height:1.45;font-variant-numeric:tabular-nums}
+.hlist .tag{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:999px;margin-left:6px;background:var(--lane);color:var(--muted);vertical-align:1px}
+.hlist .tag.user{background:var(--accent);color:var(--accent-ink)}
+.hlist .L{color:var(--left);font-weight:700}.hlist .R{color:var(--right);font-weight:700}
+#listText{width:100%;min-height:120px;font:13px var(--font-ui);border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);padding:8px}
+#panel,#btPanel,#listPanel{position:absolute;right:0;top:56px;z-index:5;width:min(380px,100%);max-height:calc(100% - 70px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px rgba(10,20,40,.18);padding:16px;display:grid;gap:14px}
 #panel h2{font:20px var(--font-disp);margin:0}
 .row{display:grid;gap:6px}
 .row>.k{font-size:13px;font-weight:700;color:var(--muted)}
@@ -106,6 +112,7 @@ kbd{font:600 12px var(--font-ui);border:1px solid var(--line);border-bottom-widt
     <button class="btn" id="fermBtn">늘임표: 선생님 신호</button>
     <button class="btn" id="hideBtn" title="계이름 가리기 (H)">계이름: 보이기</button>
     <div class="spacer"></div>
+    <button class="btn" id="listBtn" aria-expanded="false">바꾼 손 목록</button>
     <button class="btn" id="btBtn" aria-expanded="false">♫ 반주</button>
     <button class="btn" id="setBtn" aria-expanded="false">설정</button>
     <button class="btn" id="fsBtn">전체 화면</button>
@@ -119,6 +126,14 @@ kbd{font:600 12px var(--font-ui);border:1px solid var(--line);border-bottom-widt
     <button class="btn" id="allBtn">전체</button>
   </div>
   <div class="stage" id="stage"><canvas id="cv"></canvas></div>
+
+  <div id="listPanel" hidden>
+    <h2 id="listTitle">바꾼 손 목록</h2>
+    <p class="hint">처음 자동으로 정해진 손에서 달라진 음이에요. <b>고정</b>은 사이트에 저장되어 어느 컴퓨터에서나 같고, <b>직접 바꿈</b>은 이 브라우저에만 저장돼요.</p>
+    <ol id="handList" class="hlist"></ol>
+    <div class="bar"><button class="btn" id="copyList">목록 복사</button><span class="hint" id="copyMsg"></span></div>
+    <textarea id="listText" readonly hidden></textarea>
+  </div>
 
   <div id="btPanel" hidden>
     <h2 id="btTitle">반주</h2>
@@ -204,12 +219,13 @@ const D2='E5:1 D5:1 C5:1 B4:1', D3='A4:.5 G4:.25 G4:.25 R:2 G4:.5 G4:.5',
       G8='G4:.5 '.repeat(8), G5B='G4:.5 '.repeat(5)+'B4:.5 R:1', G5D='G4:.5 '.repeat(5)+'D4:.5 R:1';
 const SONGS={
   // hands: fixed hand choices {measure(0-based): {note index in measure: 'L'|'R'}}
-  rainbow:{title:'오버 더 레인보우',bpm:76,split:32,sharps:[],hands:{6:{0:'R'},14:{0:'R'},30:{0:'R'}},
+  rainbow:{title:'오버 더 레인보우',bpm:76,split:32,sharps:[],hands:{6:{0:'R',3:'L'},14:{0:'R'},17:{6:'R'},30:{0:'R',3:'R'}},
     sections:[[0,'가'],[8,'나'],[16,'다'],[24,'라']],
     m:[R1,R2,R3,R4,R5,R6,R7,'D4:4', R1,R2,R3,R4,R5,R6,R7,'C4:3 R:.5 G4:.5',
        R17,R18,'A4:2 A4:2','A4:2 G4:1 R:.5 G4:.5', R17,R18,'A4:2 A4:2','A4:2 D5:2^',
        R1,R2,R3,R4,R5,R6,R7,'C4:4']},
   dynamite:{title:'다이너마이트',bpm:70,split:33,sharps:[3],
+    hands:{2:{2:'L'},4:{2:'L',3:'R'},5:{2:'L',3:'L'},15:{1:'R',2:'L',3:'R',4:'L'},18:{2:'L'}},
     sections:[[0,'가'],[9,'나 솔솔솔'],[15,'다 마무리']],
     m:['R:3 G4:1',D2,D3,D2,D3,D6,D7,D2,D3,G8,G5B,G8,G5D,G8,G5B,D6,D7,D2,'A4:.5 G4:.25 G4:.25 R:2']}
 };
@@ -269,10 +285,21 @@ function build(){
   selA=Math.min(selA,mStart.length-1); selB=Math.min(selB,mStart.length-1);
 }
 function assignHands(){
-  const notes=events.filter(e=>e.key!=null), fixed=SONGS[S.song].hands||{}, ov={};
+  const notes=events.filter(e=>e.key!=null), fixed=SONGS[S.song].hands||{}, ov={}, user=S.over[S.song]||{};
   let pm=-1, idx=0;
-  for(const e of notes){if(e.m!==pm){pm=e.m; idx=0;} const f=fixed[e.m]&&fixed[e.m][idx++]; if(f) ov[e.ni]=f;}
-  Object.assign(ov,S.over[S.song]||{});
+  for(const e of notes){if(e.m!==pm){pm=e.m; idx=0;} e.mi=idx++; const f=fixed[e.m]&&fixed[e.m][e.mi]; if(f) ov[e.ni]=f;}
+  const fixedSet=new Set(Object.keys(ov).map(Number));
+  Object.assign(ov,user);
+  // baseline = what the chosen mode gives with no hand changes at all (for the change list)
+  baseHands(notes,{}); for(const e of notes) e.base=e.hand;
+  baseHands(notes,ov);
+  for(const e of notes){if(ov[e.ni]) e.hand=ov[e.ni]; e.src=user[e.ni]?'user':fixedSet.has(e.ni)?'fixed':'';}
+  // how many beats before the hit this hand should start lifting the mallet
+  const lastBy={L:-Infinity,R:-Infinity};
+  for(const e of notes){e.up=Math.min(1,Math.max(.25,(e.start-lastBy[e.hand])*.5)); lastBy[e.hand]=e.start;}
+  if(typeof document!=='undefined') renderHandList();
+}
+function baseHands(notes,ov){
   if(S.hand==='auto') autoHands(notes,ov);
   else {
     let alt='R'; const split=S.split[S.song];
@@ -283,10 +310,6 @@ function assignHands(){
       else {e.hand=alt; alt=alt==='R'?'L':'R';}
     }
   }
-  for(const e of notes) if(ov[e.ni]) e.hand=ov[e.ni];
-  // how many beats before the hit this hand should start lifting the mallet
-  const lastBy={L:-Infinity,R:-Infinity};
-  for(const e of notes){e.up=Math.min(1,Math.max(.25,(e.start-lastBy[e.hand])*.5)); lastBy[e.hand]=e.start;}
 }
 // "자연스럽게": pick L/R for every note so hands move as little as possible, fast notes alternate,
 // hands never cross, and each hand leans toward its own side. Solved exactly with a Viterbi pass
@@ -767,12 +790,35 @@ $('metVol').oninput=e=>{S.metVol=+e.target.value; save();};
 $('melVol').oninput=e=>{S.melVol=+e.target.value; save();};
 $('offRange').oninput=e=>{S.offset=+e.target.value; save(); ui();};
 function openPanel(id){
-  for(const [pid,bid] of [['panel','setBtn'],['btPanel','btBtn']]){
+  for(const [pid,bid] of [['panel','setBtn'],['btPanel','btBtn'],['listPanel','listBtn']]){
     const p=$(pid), open=pid===id&&p.hidden; p.hidden=!open; $(bid).setAttribute('aria-expanded',String(open));
     if(bid==='setBtn') $(bid).classList.toggle('on',open);
   }
 }
-$('setBtn').onclick=()=>openPanel('panel'); $('btBtn').onclick=()=>openPanel('btPanel');
+$('setBtn').onclick=()=>openPanel('panel'); $('btBtn').onclick=()=>openPanel('btPanel'); $('listBtn').onclick=()=>openPanel('listPanel');
+const HW={L:'왼손',R:'오른손'};
+function handListItems(){
+  return events.filter(e=>e.key!=null&&e.hand!==e.base).map(e=>({e,
+    text:`${e.m+1}마디 ${e.mi+1}번째 ${(octWord(e.key)+' '+KO[e.key%7]).trim()}: ${HW[e.base]} → ${HW[e.hand]}`,
+    tag:e.src==='user'?'직접 바꿈':e.src==='fixed'?'고정':'함께 조정'}));
+}
+function renderHandList(){
+  const items=handListItems(), ol=$('handList');
+  $('listTitle').textContent=`바꾼 손 목록 · ${SONGS[S.song].title}`;
+  ol.innerHTML=items.length?'':'<li>바꾼 음이 없어요. 멈춘 상태에서 타일을 누르면 손을 바꿀 수 있어요.</li>';
+  for(const it of items){
+    const li=document.createElement('li'), e=it.e;
+    li.innerHTML=`${e.m+1}마디 ${e.mi+1}번째 <b>${(octWord(e.key)+' '+KO[e.key%7]).trim()}</b>: <span class="${e.base}">${HW[e.base]}</span> → <span class="${e.hand}">${HW[e.hand]}</span><span class="tag ${e.src==='user'?'user':''}">${it.tag}</span>`;
+    ol.appendChild(li);
+  }
+  $('copyMsg').textContent='';
+}
+$('copyList').onclick=()=>{
+  const items=handListItems(), txt=`[${SONGS[S.song].title}] 바꾼 손\n`+(items.length?items.map(it=>`- ${it.text} (${it.tag})`).join('\n'):'- 없음');
+  const ta=$('listText'); ta.value=txt;
+  const fallback=()=>{ta.hidden=false; ta.focus(); ta.select(); $('copyMsg').textContent='아래 글을 선택해서 복사하세요.';};
+  try{navigator.clipboard.writeText(txt).then(()=>{$('copyMsg').textContent='복사했어요.';},fallback);}catch(err){fallback();}
+};
 function fullscreen(){const el=$('app'); try{if(document.fullscreenElement) document.exitFullscreen(); else el.requestFullscreen().catch(()=>{});}catch(e){}}
 $('fsBtn').onclick=fullscreen;
 $('themeBtn').onclick=()=>{const dark=getComputedStyle(document.documentElement).getPropertyValue('--stage').trim().toLowerCase()==='#0a0f18';
