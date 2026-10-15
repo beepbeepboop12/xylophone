@@ -67,7 +67,20 @@ label.chk{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600
 label.chk input{width:18px;height:18px;accent-color:var(--accent)}
 .stage{flex:1;min-height:0;position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--stage)}
 #cv{width:100%;height:100%;display:block}
-#panel h2,#btPanel h2{font:20px var(--font-disp);margin:0}
+#panel h2,#btPanel h2,#songPanel h2{font:20px var(--font-disp);margin:0}
+#songPanel{width:min(460px,100%)}
+#songPanel input[type=text]{width:100%;font:600 15px var(--font-ui);padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+#sgText{width:100%;min-height:150px;resize:vertical;font:15px/1.6 var(--font-ui);padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+#songPanel label.k2{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--muted)}
+#sgCheck.bad{color:var(--right)}
+.help{font-size:13px;line-height:1.6;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.help summary{cursor:pointer;font-weight:700}
+.help ul{margin:6px 0 0;padding-left:18px}
+.help code{font:600 13px var(--font-ui);background:var(--lane);padding:0 5px;border-radius:4px}
+.mylist{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.mylist li{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.mylist li b{flex:1;min-width:0}
+.mylist .btn{padding:4px 9px;font-size:13px}
 .row input[type=number]{width:84px;font:600 15px var(--font-ui);padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
 .row input[type=file]{font:14px var(--font-ui);max-width:100%}
 .row .bar{gap:6px 8px}
@@ -77,7 +90,7 @@ label.chk input{width:18px;height:18px;accent-color:var(--accent)}
 .hlist .tag.user{background:var(--accent);color:var(--accent-ink)}
 .hlist .L{color:var(--left);font-weight:700}.hlist .R{color:var(--right);font-weight:700}
 #listText{width:100%;min-height:120px;font:13px var(--font-ui);border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);padding:8px}
-#panel,#btPanel,#listPanel{position:absolute;right:0;top:56px;z-index:5;width:min(380px,100%);max-height:calc(100% - 70px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px rgba(10,20,40,.18);padding:16px;display:grid;gap:14px}
+#panel,#btPanel,#listPanel,#songPanel{position:absolute;right:0;top:56px;z-index:5;width:min(380px,100%);max-height:calc(100% - 70px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px rgba(10,20,40,.18);padding:16px;display:grid;gap:14px}
 #panel h2{font:20px var(--font-disp);margin:0}
 .row{display:grid;gap:6px}
 .row>.k{font-size:13px;font-weight:700;color:var(--muted)}
@@ -95,9 +108,8 @@ kbd{font:600 12px var(--font-ui);border:1px solid var(--line);border-bottom-widt
   <div class="bar">
     <div class="brand">실로폰 타일</div>
     <div class="seg" id="songSeg" role="group" aria-label="곡 선택">
-      <button data-song="rainbow">오버 더 레인보우</button>
-      <button data-song="dynamite">다이너마이트</button>
     </div>
+    <button class="btn" id="songBtn" aria-expanded="false">+ 곡 추가</button>
     <button class="btn primary" id="playBtn">▶ 시작</button>
     <button class="btn" id="stopBtn" title="처음 위치로 (R)">■ 처음으로</button>
     <div class="tempo">
@@ -126,6 +138,31 @@ kbd{font:600 12px var(--font-ui);border:1px solid var(--line);border-bottom-widt
     <button class="btn" id="allBtn">전체</button>
   </div>
   <div class="stage" id="stage"><canvas id="cv"></canvas></div>
+
+  <div id="songPanel" hidden>
+    <h2 id="sgHead">곡 추가</h2>
+    <div class="row" id="myRow"><span class="k">내가 추가한 곡</span><ul class="mylist" id="myList"></ul></div>
+    <div class="row"><span class="k">곡 이름</span><input type="text" id="sgTitle" placeholder="예: 작은 별"></div>
+    <div class="bar">
+      <label class="k2">빠르기 ♩= <input type="number" id="sgBpm" min="30" max="200" value="80"></label>
+      <label class="k2">한 마디 <select id="sgBeats"><option value="2">2박</option><option value="3">3박</option><option value="4" selected>4박</option><option value="6">6박</option></select></label>
+    </div>
+    <div class="row"><span class="k">악보 (계이름 + 박 수)</span>
+      <textarea id="sgText" spellcheck="false" placeholder="도1 도1 솔1 솔1 | 라1 라1 솔2&#10;파1 파1 미1 미1 | 레1 레1 도2"></textarea>
+      <p class="hint" id="sgCheck">악보를 쓰면 여기서 바로 확인해 줘요.</p></div>
+    <details class="help" open><summary>쓰는 법</summary><ul>
+      <li>계이름 뒤 숫자 = 박 수: <code>도1</code> <code>솔0.5</code>(반 박) <code>미2</code> <code>라1.5</code>. 숫자가 없으면 1박</li>
+      <li>마디 나누기: <code>|</code> 또는 줄 바꿈</li>
+      <li>쉼표: <code>쉼1</code> <code>쉼0.5</code></li>
+      <li>높은 음 <code>높도</code> 또는 <code>도'</code> · 낮은 음 <code>낮라</code> 또는 <code>라,</code></li>
+      <li>늘임표: <code>레2~</code> · 샵: <code>파#1</code></li>
+      <li>구간 이름: 마디 앞에 <code>[후렴]</code></li>
+    </ul></details>
+    <div class="bar"><button class="btn primary" id="sgSave">저장하고 열기</button><button class="btn" id="sgNew">새로 쓰기</button><button class="btn" id="sgCopy">곡 코드 복사</button></div>
+    <p class="hint" id="sgMsg"></p>
+    <textarea id="sgCopyText" readonly hidden></textarea>
+    <p class="hint">추가한 곡은 이 브라우저에만 저장돼요. 다른 컴퓨터에서는 "곡 코드 복사"로 복사한 글을 악보 칸에 그대로 붙여 넣으면 되고, 저에게 보내 주시면 사이트에 아예 넣어 드려요.</p>
+  </div>
 
   <div id="listPanel" hidden>
     <h2 id="listTitle">바꾼 손 목록</h2>
@@ -232,10 +269,47 @@ const SONGS={
     m:['R:3 G4:1',D2,D3,D2,D3,D6,D7,D2,D3,G8,G5B,G8,G5D,G8,G5B,D6,D7,D2,'A4:.5 G4:.25 G4:.25 R:2']}
 };
 const pidx=p=>parseInt(p[1])*7+LETTERS.indexOf(p[0]);
-for(const s of Object.values(SONGS)) s.parsed=s.m.map(str=>str.trim().split(/\s+/).map(tok=>{
+function parseSong(s){s.parsed=s.m.map(str=>str.trim().split(/\s+/).map(tok=>{
   const ferm=tok.endsWith('^'); if(ferm) tok=tok.slice(0,-1);
   const [p,d]=tok.split(':'); return {key:p==='R'?null:pidx(p),dur:parseFloat(d),ferm};
-}));
+}));}
+for(const s of Object.values(SONGS)) parseSong(s);
+
+// ---------- songs typed in on the page: "도1 레0.5 미2 | 쉼1 높도2~" → the same "C4:1" format as above ----------
+const NOTE_RE=/^(높은|높|낮은|낮|\^+|_+)?(도|레|미|파|솔|라|시|쉼|쉬)(#)?('+|,+)?(\d+\/\d+|\d*\.?\d+)?(~)?$/;
+function parseScoreText(text){
+  const errors=[], measures=[], sums=[], sections=[], sharps=new Set(); let label=null, lo=Infinity, hi=-Infinity;
+  for(const chunk of text.replace(/\r/g,'').split(/[|\n]/)){
+    const meas=[]; let sum=0;
+    for(const t of chunk.trim().split(/\s+/).filter(Boolean)){
+      const sec=t.match(/^\[(.*)\]$/); if(sec){label=sec[1]; continue;}
+      const mm=t.match(NOTE_RE);
+      if(!mm){errors.push(`${measures.length+1}마디의 "${t}"를 읽을 수 없어요`); continue;}
+      const [,pre,name,sharp,marks,len,ferm]=mm;
+      let dur=1; if(len) dur=len.includes('/')?+len.split('/')[0]/+len.split('/')[1]:parseFloat(len);
+      if(!(dur>0)||dur>16){errors.push(`${measures.length+1}마디의 "${t}" 길이가 이상해요`); continue;}
+      sum+=dur;
+      if(name==='쉼'||name==='쉬'){meas.push('R:'+dur); continue;}
+      let oct=4;
+      if(pre) oct+=pre[0]==='높'?1:pre[0]==='낮'?-1:pre[0]==='^'?pre.length:-pre.length;
+      if(marks) oct+=marks[0]==="'"?marks.length:-marks.length;
+      if(oct<1||oct>8){errors.push(`${measures.length+1}마디의 "${t}"는 너무 높거나 낮아요`); continue;}
+      const li=KO.indexOf(name); if(sharp) sharps.add(li);
+      const key=oct*7+li; lo=Math.min(lo,key); hi=Math.max(hi,key);
+      meas.push(LETTERS[li]+oct+':'+dur+(ferm?'^':''));
+    }
+    if(meas.length){if(label!=null){sections.push([measures.length,label]); label=null;} measures.push(meas.join(' ')); sums.push(sum);}
+  }
+  if(measures.length&&lo===Infinity) errors.push('음이 하나도 없어요');
+  return {measures,sums,errors,sections,sharps:[...sharps],lo,hi};
+}
+function makeCustomSong(rec){
+  const p=parseScoreText(rec.text||''); if(!p.measures.length||p.errors.length) return null;
+  const secs=p.sections.length?p.sections:[[0,'']]; if(secs[0][0]!==0) secs.unshift([0,'']);
+  const s={title:rec.title||'새 곡',bpm:+rec.bpm||80,beats:+rec.beats||4,split:Math.round((p.lo+p.hi+1)/2),
+    sharps:p.sharps,sections:secs,m:p.measures,custom:true};
+  parseSong(s); return s;
+}
 
 // ---------- settings ----------
 const DEF={song:'rainbow',countIn:4,hideNames:0,hand:'auto',over:{rainbow:{},dynamite:{}},color:'note',names:'ko',look:6,ferm:'hold',loopInc:0,
@@ -244,10 +318,17 @@ const DEF={song:'rainbow',countIn:4,hideNames:0,hand:'auto',over:{rainbow:{},dyn
 let S=structuredClone(DEF);
 try{const raw=localStorage.getItem('xylo-tiles-v1'); if(raw){const o=JSON.parse(raw), ob=o.bt||{};
   S={...S,...o,bpm:{...DEF.bpm,...o.bpm},split:{...DEF.split,...o.split},
-    bt:{rainbow:{...DEF.bt.rainbow,...ob.rainbow},dynamite:{...DEF.bt.dynamite,...ob.dynamite}}};}}catch(e){}
+    bt:{...ob,rainbow:{...DEF.bt.rainbow,...ob.rainbow},dynamite:{...DEF.bt.dynamite,...ob.dynamite}}};}}catch(e){}
 if(!S.colorV2){S.color='note'; S.colorV2=1;}
 if(!S.handV2){S.hand='auto'; S.handV2=1;}
 S.over={rainbow:{},dynamite:{},...(S.over||{})};
+let customSongs=[];
+try{customSongs=JSON.parse(localStorage.getItem('xylo-tiles-songs')||'[]')||[];}catch(e){}
+function saveCustom(){try{localStorage.setItem('xylo-tiles-songs',JSON.stringify(customSongs));}catch(e){}}
+function ensureSongSettings(id){const s=SONGS[id]; S.bpm[id]??=s.bpm; S.split[id]??=s.split; S.over[id]??={}; S.bt[id]??={on:1,bpm:s.bpm,first:0};}
+function registerCustom(rec){const s=makeCustomSong(rec); if(!s) return false; SONGS[rec.id]=s; ensureSongSettings(rec.id); return true;}
+customSongs.forEach(registerCustom);
+if(!SONGS[S.song]) S.song='rainbow';
 function save(){try{localStorage.setItem('xylo-tiles-v1',JSON.stringify(S));}catch(e){}}
 
 // ---------- timeline ----------
@@ -678,8 +759,8 @@ function draw(pos){
   const mtxt=pos<playFrom?'준비':`${mi+1}마디`; g.fillText(mtxt,16,hudH/2+1);
   const mw=g.measureText(mtxt).width; g.font=`16px ${DISP}`; g.fillStyle=C.muted; g.fillText(`/ ${mStart.length} · ${sec}`,24+mw,hudH/2+2);
   // beat dots
-  let bi=-1, nb=4;
-  if(pos<playFrom){bi=Math.floor(pos-countStart); nb=Math.max(1,Math.min(4,S.countIn)); bi=bi%nb;}
+  const beats=SONGS[S.song].beats||4; let bi=-1, nb=beats;
+  if(pos<playFrom){bi=Math.floor(pos-countStart); nb=Math.max(1,Math.min(beats,S.countIn)); bi=bi%nb;}
   else if(cur&&cur.prep){bi=Math.floor(pos-cur.start); nb=2;}
   else if(pos<R.end) bi=Math.floor(pos-mStart[mi]);
   if(state==='stopped'||state==='ended') bi=-1;
@@ -782,7 +863,89 @@ function fillSplit(){
   sel.value=S.split[S.song];
 }
 $('splitSel').onchange=e=>{S.split[S.song]=+e.target.value; assignHands(); save();};
-$('songSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(S.song===b.dataset.song) return; S.song=b.dataset.song; save(); stop(); loadBacking(S.song); build(); selA=0; selB=mStart.length-1; buildStrip(); fillSplit(); resetPreview(); ui();});
+function selectSong(id,force){
+  if(!SONGS[id]||(S.song===id&&!force)) return;
+  S.song=id; save(); stop(); loadBacking(S.song); build(); selA=0; selB=mStart.length-1; buildStrip(); fillSplit(); resetPreview(); ui();
+}
+function renderSongSeg(){
+  const seg=$('songSeg'); seg.innerHTML='';
+  for(const [id,s] of Object.entries(SONGS)){const b=document.createElement('button'); b.dataset.song=id; b.textContent=s.title; b.onclick=()=>selectSong(id); seg.appendChild(b);}
+}
+renderSongSeg();
+
+// ---------- song editor ----------
+let editingId=null, delArm=null;
+function songCode(title,bpm,beats,text){return `[곡] ${title}\n빠르기: ${bpm}\n한 마디: ${beats}박\n${text.trim()}`;}
+function checkSongText(){
+  const p=parseScoreText($('sgText').value), beats=+$('sgBeats').value, el=$('sgCheck');
+  if(!$('sgText').value.trim()){el.textContent='악보를 쓰면 여기서 바로 확인해 줘요.'; el.className='hint'; return p;}
+  const warn=[];
+  p.sums.forEach((s,i)=>{if(i>0&&i<p.sums.length-1&&Math.abs(s-beats)>1e-6) warn.push(`${i+1}마디가 ${+s.toFixed(2)}박이에요 (${beats}박이어야 해요)`);});
+  if(p.errors.length){el.className='hint bad'; el.textContent=p.errors.slice(0,4).join(' · ');}
+  else{
+    const rng=p.lo<=p.hi?`${(octWord(p.lo)+' '+KO[p.lo%7]).trim()} ~ ${(octWord(p.hi)+' '+KO[p.hi%7]).trim()}`:'';
+    el.className=warn.length?'hint bad':'hint';
+    el.textContent=`${p.measures.length}마디 · 음 범위 ${rng}`+(warn.length?' · 확인: '+warn.slice(0,3).join(', '):' · 좋아요!');
+  }
+  return p;
+}
+function fillEditor(rec){
+  editingId=rec?rec.id:null;
+  $('sgHead').textContent=rec?`곡 고치기 · ${rec.title}`:'곡 추가';
+  $('sgTitle').value=rec?rec.title:''; $('sgBpm').value=rec?rec.bpm:80; $('sgBeats').value=String(rec?rec.beats:4);
+  $('sgText').value=rec?rec.text:''; $('sgMsg').textContent=''; checkSongText();
+}
+function renderMyList(){
+  const ul=$('myList'); ul.innerHTML=''; $('myRow').hidden=!customSongs.length;
+  for(const rec of customSongs){
+    const li=document.createElement('li'), b=document.createElement('b'); b.textContent=rec.title; li.appendChild(b);
+    for(const [label,fn] of [['열기',()=>selectSong(rec.id)],['고치기',()=>fillEditor(rec)],[delArm===rec.id?'정말 지울까요?':'지우기',()=>removeSong(rec.id)]]){
+      const btn=document.createElement('button'); btn.className='btn'; btn.textContent=label; btn.onclick=fn; li.appendChild(btn);
+    }
+    ul.appendChild(li);
+  }
+}
+function removeSong(id){
+  if(delArm!==id){delArm=id; renderMyList(); return;}
+  delArm=null; customSongs=customSongs.filter(r=>r.id!==id); saveCustom();
+  delete SONGS[id]; delete S.over[id]; delete S.bpm[id]; delete S.split[id]; delete S.bt[id]; save();
+  idbDo('readwrite',st=>st.delete(id));
+  if(editingId===id) fillEditor(null);
+  renderSongSeg(); renderMyList(); if(S.song===id) selectSong('rainbow',true); else ui();
+}
+$('sgText').addEventListener('input',()=>{
+  const ta=$('sgText'), v=ta.value;
+  if(/^\s*\[곡\]/.test(v)){ // pasted song code: pull the header lines into the fields
+    const lines=v.replace(/\r/g,'').split('\n'), rest=[];
+    for(const l of lines){let m;
+      if((m=l.match(/^\s*\[곡\]\s*(.*)$/))) $('sgTitle').value=m[1].trim();
+      else if((m=l.match(/^\s*빠르기\s*[:：]\s*(\d+)/))) $('sgBpm').value=m[1];
+      else if((m=l.match(/^\s*한 ?마디\s*[:：]\s*(\d+)/))) $('sgBeats').value=m[1];
+      else rest.push(l);}
+    ta.value=rest.join('\n').trim();
+  }
+  checkSongText();
+});
+$('sgBeats').onchange=checkSongText;
+$('sgNew').onclick=()=>fillEditor(null);
+$('sgSave').onclick=()=>{
+  const p=checkSongText(), title=$('sgTitle').value.trim()||'새 곡', bpm=Math.max(30,Math.min(200,+$('sgBpm').value||80)), beats=+$('sgBeats').value;
+  if(!p.measures.length){$('sgMsg').textContent='악보를 먼저 써 주세요.'; return;}
+  if(p.errors.length){$('sgMsg').textContent='빨간 글씨로 표시된 부분을 고친 뒤 저장해 주세요.'; return;}
+  const rec={id:editingId||'c'+Date.now(),title,bpm,beats,text:$('sgText').value.trim()};
+  const i=customSongs.findIndex(r=>r.id===rec.id); if(i>=0) customSongs[i]=rec; else customSongs.push(rec);
+  saveCustom(); delete S.bpm[rec.id]; S.over[rec.id]={}; delete S.split[rec.id];
+  registerCustom(rec); save(); editingId=rec.id;
+  renderSongSeg(); renderMyList(); selectSong(rec.id,true);
+  $('sgHead').textContent=`곡 고치기 · ${rec.title}`; $('sgMsg').textContent='저장했어요. 위에서 바로 연주해 볼 수 있어요.';
+};
+$('sgCopy').onclick=()=>{
+  const txt=songCode($('sgTitle').value.trim()||'새 곡',$('sgBpm').value,$('sgBeats').value,$('sgText').value);
+  const ta=$('sgCopyText'); ta.value=txt;
+  const fallback=()=>{ta.hidden=false; ta.focus(); ta.select(); $('sgMsg').textContent='아래 글을 선택해서 복사하세요.';};
+  try{navigator.clipboard.writeText(txt).then(()=>{$('sgMsg').textContent='곡 코드를 복사했어요.';},fallback);}catch(err){fallback();}
+};
+renderMyList();
 $('playBtn').onclick=toggle; $('stopBtn').onclick=stop;
 $('bpmDown').onclick=()=>setBpm(S.bpm[S.song]-2); $('bpmUp').onclick=()=>setBpm(S.bpm[S.song]+2);
 $('bpmRange').oninput=e=>setBpm(+e.target.value);
@@ -794,12 +957,12 @@ $('metVol').oninput=e=>{S.metVol=+e.target.value; save();};
 $('melVol').oninput=e=>{S.melVol=+e.target.value; save();};
 $('offRange').oninput=e=>{S.offset=+e.target.value; save(); ui();};
 function openPanel(id){
-  for(const [pid,bid] of [['panel','setBtn'],['btPanel','btBtn'],['listPanel','listBtn']]){
+  for(const [pid,bid] of [['panel','setBtn'],['btPanel','btBtn'],['listPanel','listBtn'],['songPanel','songBtn']]){
     const p=$(pid), open=pid===id&&p.hidden; p.hidden=!open; $(bid).setAttribute('aria-expanded',String(open));
     if(bid==='setBtn') $(bid).classList.toggle('on',open);
   }
 }
-$('setBtn').onclick=()=>openPanel('panel'); $('btBtn').onclick=()=>openPanel('btPanel'); $('listBtn').onclick=()=>openPanel('listPanel');
+$('setBtn').onclick=()=>openPanel('panel'); $('btBtn').onclick=()=>openPanel('btPanel'); $('listBtn').onclick=()=>openPanel('listPanel'); $('songBtn').onclick=()=>openPanel('songPanel');
 const HW={L:'왼손',R:'오른손'};
 function handListItems(){
   return events.filter(e=>e.key!=null&&e.hand!==e.base).map(e=>({e,
