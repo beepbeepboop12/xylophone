@@ -129,7 +129,7 @@ kbd{font:600 12px var(--font-ui);border:1px solid var(--line);border-bottom-widt
 
   <div id="listPanel" hidden>
     <h2 id="listTitle">바꾼 손 목록</h2>
-    <p class="hint">처음 자동으로 정해진 손에서 달라진 음이에요. <b>고정</b>은 사이트에 저장되어 어느 컴퓨터에서나 같고, <b>직접 바꿈</b>은 이 브라우저에만 저장돼요.</p>
+    <p class="hint">사이트에 고정된 손에서 이 브라우저에서 새로 바꾼 음이에요. <b>직접 바꿈</b>은 내가 누른 음, <b>함께 조정</b>은 같은 마디를 맞추거나 손이 엉키지 않게 자동으로 따라 바뀐 음이에요. 목록을 복사해서 보내 주면 고정으로 넣어 드릴 수 있어요.</p>
     <ol id="handList" class="hlist"></ol>
     <div class="bar"><button class="btn" id="copyList">목록 복사</button><span class="hint" id="copyMsg"></span></div>
     <textarea id="listText" readonly hidden></textarea>
@@ -218,8 +218,10 @@ const D2='E5:1 D5:1 C5:1 B4:1', D3='A4:.5 G4:.25 G4:.25 R:2 G4:.5 G4:.5',
       D6='D4:.25 E4:.5 G4:.75 A4:.5 B4:.25 C5:.5 B4:.75 C5:.5', D7='D5:1 D5:1 B4:1 R:.5 G4:.5',
       G8='G4:.5 '.repeat(8), G5B='G4:.5 '.repeat(5)+'B4:.5 R:1', G5D='G4:.5 '.repeat(5)+'D4:.5 R:1';
 const SONGS={
-  // hands: fixed hand choices {measure(0-based): {note index in measure: 'L'|'R'}}
-  rainbow:{title:'오버 더 레인보우',bpm:76,split:32,sharps:[],hands:{6:{0:'R',3:'L'},14:{0:'R'},17:{6:'R'},30:{0:'R',3:'R'}},
+  // hands: fixed hand choices per measure (0-based) — either {note index: 'L'|'R'} or a full string like 'RLRLR'
+  rainbow:{title:'오버 더 레인보우',bpm:76,split:32,sharps:[],
+    hands:["LR","RLRLR","LR","R","LR","RLRLR","RLRLR","L","LR","RLRLR","LR","R","LR","RLRLR","RLRLR","LR",
+           "LRLRLRR","LRLRLRR","RR","RRR","LRLRLRR","LRLRLRR","RR","RR","LR","RLRLR","LR","R","LR","RLRLR","RLRRR","L"],
     sections:[[0,'가'],[8,'나'],[16,'다'],[24,'라']],
     m:[R1,R2,R3,R4,R5,R6,R7,'D4:4', R1,R2,R3,R4,R5,R6,R7,'C4:3 R:.5 G4:.5',
        R17,R18,'A4:2 A4:2','A4:2 G4:1 R:.5 G4:.5', R17,R18,'A4:2 A4:2','A4:2 D5:2^',
@@ -288,12 +290,14 @@ function assignHands(){
   const notes=events.filter(e=>e.key!=null), fixed=SONGS[S.song].hands||{}, ov={}, user=S.over[S.song]||{};
   let pm=-1, idx=0;
   for(const e of notes){if(e.m!==pm){pm=e.m; idx=0;} e.mi=idx++; const f=fixed[e.m]&&fixed[e.m][e.mi]; if(f) ov[e.ni]=f;}
-  const fixedSet=new Set(Object.keys(ov).map(Number));
+  // baseline = the chosen mode plus the fixed hands saved in the site; the change list compares against it
+  baseHands(notes,ov); for(const e of notes){if(ov[e.ni]) e.hand=ov[e.ni]; e.base=e.hand;}
+  // a browser change that matches the baseline is no longer a change: forget it
+  let pruned=false; for(const e of notes) if(user[e.ni]&&user[e.ni]===e.base){delete user[e.ni]; pruned=true;}
+  if(pruned) save();
   Object.assign(ov,user);
-  // baseline = what the chosen mode gives with no hand changes at all (for the change list)
-  baseHands(notes,{}); for(const e of notes) e.base=e.hand;
   baseHands(notes,ov);
-  for(const e of notes){if(ov[e.ni]) e.hand=ov[e.ni]; e.src=user[e.ni]?'user':fixedSet.has(e.ni)?'fixed':'';}
+  for(const e of notes){if(ov[e.ni]) e.hand=ov[e.ni]; e.src=user[e.ni]?'user':'';}
   // how many beats before the hit this hand should start lifting the mallet
   const lastBy={L:-Infinity,R:-Infinity};
   for(const e of notes){e.up=Math.min(1,Math.max(.25,(e.start-lastBy[e.hand])*.5)); lastBy[e.hand]=e.start;}
@@ -800,7 +804,7 @@ const HW={L:'왼손',R:'오른손'};
 function handListItems(){
   return events.filter(e=>e.key!=null&&e.hand!==e.base).map(e=>({e,
     text:`${e.m+1}마디 ${e.mi+1}번째 ${(octWord(e.key)+' '+KO[e.key%7]).trim()}: ${HW[e.base]} → ${HW[e.hand]}`,
-    tag:e.src==='user'?'직접 바꿈':e.src==='fixed'?'고정':'함께 조정'}));
+    tag:e.src==='user'?'직접 바꿈':'함께 조정'}));
 }
 function renderHandList(){
   const items=handListItems(), ol=$('handList');
