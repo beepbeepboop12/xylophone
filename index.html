@@ -62,6 +62,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .mb .sl{position:absolute;top:2px;left:4px;font:13px var(--font-disp);color:var(--muted);white-space:nowrap}
 .mb.out{opacity:.35}
 .mb.cur{border-color:var(--ink);box-shadow:inset 0 -4px 0 var(--ink)}
+.mb.pick{outline:3px solid var(--accent);outline-offset:-1px;opacity:1}
 #selInfo{font-size:13px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 label.chk{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer}
 label.chk input{width:18px;height:18px;accent-color:var(--accent)}
@@ -821,15 +822,25 @@ function buildStrip(){
 }
 function paintSel(){
   const a=Math.min(selA,selB), b=Math.max(selA,selB), n=mStart.length;
-  strip.querySelectorAll('.mb').forEach((el,i)=>el.classList.toggle('out',i<a||i>b));
-  $('selInfo').textContent=(a===0&&b===n-1)?'곡 전체':`${a+1}~${b+1}마디`;
+  strip.querySelectorAll('.mb').forEach((el,i)=>{el.classList.toggle('out',i<a||i>b); el.classList.toggle('pick',i===pickStart);});
+  $('selInfo').textContent=pickStart!=null?`${pickStart+1}마디부터 · 끝 마디를 누르면 반복`
+    :(a===0&&b===n-1)?'곡 전체':a===b?`${a+1}마디만${S.loop?' 반복':''}`:`${a+1}~${b+1}마디${S.loop?' 반복':''}`;
 }
 function applySel(){if(state!=='stopped'&&state!=='ended'){state='stopped'; if(ac) stopNodes();} paintSel(); resetPreview(); state='stopped'; ui();}
-let moved=false;
-strip.addEventListener('pointerdown',ev=>{const b=ev.target.closest('.mb'); if(!b) return; ev.preventDefault(); dragging=true; moved=false; selA=+b.dataset.i; selB=mStart.length-1; try{strip.setPointerCapture(ev.pointerId);}catch(e){} applySel();});
-strip.addEventListener('pointermove',ev=>{if(!dragging) return; const el=document.elementFromPoint(ev.clientX,ev.clientY), b=el&&el.closest&&el.closest('.mb'); if(!b) return; const i=+b.dataset.i; if(i!==selA) moved=true; if(moved&&i!==selB){selB=i; applySel();}});
-addEventListener('pointerup',()=>dragging=false);
-$('allBtn').onclick=()=>{selA=0; selB=mStart.length-1; applySel();};
+// measure picking: 1st click = start (plays from there to the end), 2nd click = end of a section that repeats.
+// Clicking the same measure twice repeats just that one measure. Dragging across measures also makes a repeating section.
+let moved=false, pickStart=null;
+function setRange(a,b){selA=Math.min(a,b); selB=Math.max(a,b); pickStart=null; S.loop=true; save(); applySel();}
+strip.addEventListener('pointerdown',ev=>{
+  const b=ev.target.closest('.mb'); if(!b) return; ev.preventDefault();
+  const i=+b.dataset.i;
+  if(pickStart!=null){dragging=false; setRange(pickStart,i); return;}
+  dragging=true; moved=false; selA=i; selB=mStart.length-1; pickStart=i;
+  try{strip.setPointerCapture(ev.pointerId);}catch(e){} applySel();
+});
+strip.addEventListener('pointermove',ev=>{if(!dragging) return; const el=document.elementFromPoint(ev.clientX,ev.clientY), b=el&&el.closest&&el.closest('.mb'); if(!b) return; const i=+b.dataset.i; if(i!==selA) moved=true; if(moved&&i!==selB){selB=i; paintSel();}});
+addEventListener('pointerup',()=>{if(dragging&&moved) setRange(selA,selB); dragging=false;});
+$('allBtn').onclick=()=>{pickStart=null; selA=0; selB=mStart.length-1; S.loop=false; save(); applySel();};
 
 function segBind(id,key,after){
   const el=$(id);
@@ -865,7 +876,7 @@ function fillSplit(){
 $('splitSel').onchange=e=>{S.split[S.song]=+e.target.value; assignHands(); save();};
 function selectSong(id,force){
   if(!SONGS[id]||(S.song===id&&!force)) return;
-  S.song=id; save(); stop(); loadBacking(S.song); build(); selA=0; selB=mStart.length-1; buildStrip(); fillSplit(); resetPreview(); ui();
+  S.song=id; save(); stop(); loadBacking(S.song); build(); pickStart=null; selA=0; selB=mStart.length-1; buildStrip(); fillSplit(); resetPreview(); ui();
 }
 function renderSongSeg(){
   const seg=$('songSeg'); seg.innerHTML='';
@@ -951,7 +962,7 @@ $('bpmDown').onclick=()=>setBpm(S.bpm[S.song]-2); $('bpmUp').onclick=()=>setBpm(
 $('bpmRange').oninput=e=>setBpm(+e.target.value);
 $('metBtn').onclick=()=>{S.met=!S.met; save(); ui();};
 $('melBtn').onclick=()=>{S.mel=!S.mel; save(); ui();};
-$('loopChk').onchange=e=>{S.loop=e.target.checked; save();};
+$('loopChk').onchange=e=>{S.loop=e.target.checked; save(); paintSel();};
 $('lookRange').oninput=e=>{S.look=+e.target.value; save(); ui();};
 $('metVol').oninput=e=>{S.metVol=+e.target.value; save();};
 $('melVol').oninput=e=>{S.melVol=+e.target.value; save();};
@@ -1017,7 +1028,7 @@ addEventListener('keydown',e=>{
   else if(k==='ArrowUp'){e.preventDefault(); setBpm(S.bpm[S.song]+2);}
   else if(k==='ArrowDown'){e.preventDefault(); setBpm(S.bpm[S.song]-2);}
   else if(k==='ArrowLeft'||k==='ArrowRight'){e.preventDefault(); const n=mStart.length, a=Math.min(selA,selB), b=Math.max(selA,selB), d=k==='ArrowLeft'?-1:1;
-    const na=Math.max(0,Math.min(n-1,a+d)); selA=na; selB=Math.max(na,b); applySel();}
+    const na=Math.max(0,Math.min(n-1,a+d)); pickStart=null; selA=na; selB=Math.max(na,b); applySel();}
   else if(k==='r'||k==='R') stop();
   else if(k==='m'||k==='M'){S.met=!S.met; save(); ui();}
   else if(k==='n'||k==='N'){S.mel=!S.mel; save(); ui();}
