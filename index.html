@@ -34,8 +34,7 @@
 html,body{height:100%}
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;font-size:14px}
-body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);overflow:hidden;
+body{margin:0;font-size:14px;background:var(--bg);color:var(--ink);font-family:var(--font-ui);overflow:hidden;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 #app{height:100%;display:flex;flex-direction:column;gap:8px;padding-block:10px;position:relative}
 .bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
@@ -68,8 +67,9 @@ label.chk{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600
 label.chk input{width:18px;height:18px;accent-color:var(--accent)}
 .stage{flex:1;min-height:0;position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--stage)}
 #cv{width:100%;height:100%;display:block}
-#panel h2,#btPanel h2,#songPanel h2{font:20px var(--font-disp);margin:0}
-#btPanel{width:min(460px,100%)}
+.pop{position:absolute;right:0;top:56px;z-index:5;width:min(380px,100%);max-height:calc(100% - 70px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px rgba(10,20,40,.18);padding:16px;display:grid;gap:14px}
+.pop.wide{width:min(460px,100%)}
+.pop h2{font:20px var(--font-disp);margin:0}
 .marks{display:grid;gap:10px}
 .barlist{display:grid;gap:4px;max-height:280px;overflow:auto;padding-right:4px}
 .br{display:grid;grid-template-columns:52px 1fr repeat(4,auto);gap:4px;align-items:center;font-size:13px;font-variant-numeric:tabular-nums}
@@ -83,7 +83,6 @@ label.chk input{width:18px;height:18px;accent-color:var(--accent)}
 .mk input[type=number]{width:96px}
 .mk .btn{padding:5px 8px;font-size:13px;min-width:0}
 .mk .btn:disabled{opacity:.45;cursor:default}
-#songPanel{width:min(460px,100%)}
 #songPanel input[type=text]{width:100%;font:600 15px var(--font-ui);padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
 #sgText{width:100%;min-height:150px;resize:vertical;font:15px/1.6 var(--font-ui);padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
 #songPanel label.k2{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--muted)}
@@ -99,14 +98,11 @@ label.chk input{width:18px;height:18px;accent-color:var(--accent)}
 .row input[type=number]{width:84px;font:600 15px var(--font-ui);padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
 .row input[type=file]{font:14px var(--font-ui);max-width:100%}
 .row .bar{gap:6px 8px}
-#listPanel h2{font:20px var(--font-disp);margin:0}
 .hlist{margin:0;padding-left:22px;display:grid;gap:6px;font-size:14px;line-height:1.45;font-variant-numeric:tabular-nums}
 .hlist .tag{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:999px;margin-left:6px;background:var(--lane);color:var(--muted);vertical-align:1px}
 .hlist .tag.user{background:var(--accent);color:var(--accent-ink)}
 .hlist .L{color:var(--left);font-weight:700}.hlist .R{color:var(--right);font-weight:700}
-#listText{width:100%;min-height:120px;font:13px var(--font-ui);border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);padding:8px}
-#panel,#btPanel,#listPanel,#songPanel{position:absolute;right:0;top:56px;z-index:5;width:min(380px,100%);max-height:calc(100% - 70px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px rgba(10,20,40,.18);padding:16px;display:grid;gap:14px}
-#panel h2{font:20px var(--font-disp);margin:0}
+.copybox{width:100%;min-height:120px;font:13px var(--font-ui);border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);padding:8px}
 .row{display:grid;gap:6px}
 .row>.k{font-size:13px;font-weight:700;color:var(--muted)}
 .row .seg{width:max-content;max-width:100%;flex-wrap:wrap}
@@ -154,7 +150,7 @@ kbd{font:600 12px var(--font-ui);border:1px solid var(--line);border-bottom-widt
   </div>
   <div class="stage" id="stage"><canvas id="cv"></canvas></div>
 
-  <div id="songPanel" hidden>
+  <div id="songPanel" class="pop wide" hidden>
     <h2 id="sgHead">곡 추가</h2>
     <div class="row" id="myRow"><span class="k">내가 추가한 곡</span><ul class="mylist" id="myList"></ul></div>
     <div class="row"><span class="k">곡 이름</span><input type="text" id="sgTitle" placeholder="예: 작은 별"></div>
@@ -175,19 +171,19 @@ kbd{font:600 12px var(--font-ui);border:1px solid var(--line);border-bottom-widt
     </ul></details>
     <div class="bar"><button class="btn primary" id="sgSave">저장하고 열기</button><button class="btn" id="sgNew">새로 쓰기</button><button class="btn" id="sgCopy">곡 코드 복사</button></div>
     <p class="hint" id="sgMsg"></p>
-    <textarea id="sgCopyText" readonly hidden></textarea>
+    <textarea id="sgCopyText" class="copybox" readonly hidden></textarea>
     <p class="hint">추가한 곡은 이 브라우저에만 저장돼요. 다른 컴퓨터에서는 "곡 코드 복사"로 복사한 글을 악보 칸에 그대로 붙여 넣으면 되고, 저에게 보내 주시면 사이트에 아예 넣어 드려요.</p>
   </div>
 
-  <div id="listPanel" hidden>
+  <div id="listPanel" class="pop" hidden>
     <h2 id="listTitle">바꾼 손 목록</h2>
     <p class="hint">사이트에 고정된 손에서 이 브라우저에서 새로 바꾼 음이에요. <b>직접 바꿈</b>은 내가 누른 음, <b>함께 조정</b>은 같은 마디를 맞추거나 손이 엉키지 않게 자동으로 따라 바뀐 음이에요. 목록을 복사해서 보내 주면 고정으로 넣어 드릴 수 있어요.</p>
     <ol id="handList" class="hlist"></ol>
     <div class="bar"><button class="btn" id="copyList">목록 복사</button><span class="hint" id="copyMsg"></span></div>
-    <textarea id="listText" readonly hidden></textarea>
+    <textarea id="listText" class="copybox" readonly hidden></textarea>
   </div>
 
-  <div id="btPanel" hidden>
+  <div id="btPanel" class="pop wide" hidden>
     <h2 id="btTitle">반주</h2>
     <div class="row"><span class="k">반주 파일 (mp4 영상, mp3, m4a, wav)</span>
       <input type="file" id="btFile" accept="audio/*,video/*,.mp4,.m4a,.mp3,.wav">
@@ -217,7 +213,7 @@ kbd{font:600 12px var(--font-ui);border:1px solid var(--line);border-bottom-widt
     <p class="hint">반주를 켜면 위의 빠르기를 바꿔도 음 높이는 그대로 두고 반주만 느려지거나 빨라져요. 늘임표는 반주에 맞게 자동으로 이어가니, 설정의 "더 늘이는 길이"를 반주 속 늘임표 길이에 맞춰 주세요.</p>
   </div>
 
-  <div id="panel" hidden>
+  <div id="panel" class="pop" hidden>
     <h2>설정</h2>
     <div class="row"><span class="k">시작 전 준비 박</span>
       <div class="seg" id="ciSeg"><button data-v="0">없음</button><button data-v="2">2박</button><button data-v="4">4박 (한 마디)</button><button data-v="8">8박 (두 마디)</button></div></div>
@@ -350,18 +346,17 @@ function ensureSongSettings(id){const s=SONGS[id]; S.bpm[id]??=s.bpm; S.split[id
 function registerCustom(rec){const s=makeCustomSong(rec); if(!s) return false; SONGS[rec.id]=s; ensureSongSettings(rec.id); return true;}
 customSongs.forEach(registerCustom);
 if(!SONGS[S.song]) S.song='rainbow';
-function save(){try{localStorage.setItem('xylo-tiles-v1',JSON.stringify(S));}catch(e){}}
+function save(){anchorCache=null; try{localStorage.setItem('xylo-tiles-v1',JSON.stringify(S));}catch(e){}}
 
 // ---------- timeline ----------
-let events=[],mStart=[],mEnd=[],mSet=new Set(),holds=[],songEnd=0,lastNote=null,lastNoteEnd=0,keyMin=0,keyMax=0,keys=[];
-let selA=0,selB=0,R=null;
+let events=[],mStart=[],mEnd=[],mSet=new Set(),holds=[],songEnd=0,firstNote=null,lastNote=null,lastNoteEnd=0,keyMin=0,keyMax=0,keys=[];
+let selA=0,selB=0,R=null,anchorCache=null;
 function build(){
-  const s=SONGS[S.song]; events=[];mStart=[];mEnd=[];holds=[]; let pos=0;
+  const s=SONGS[S.song], fm=fermMode(); events=[];mStart=[];mEnd=[];holds=[]; anchorCache=null; let pos=0;
   s.parsed.forEach((meas,mi)=>{
     mStart[mi]=pos; let hold=false;
     meas.forEach(n=>{
       const ev={start:pos,dur:n.dur,key:n.key,ferm:n.ferm,m:mi};
-      const fm=fermMode();
       if(n.ferm&&fm==='extend'){ev.dur+=S.fermExt; ev.fermExt=S.fermExt;}
       if(n.ferm&&fm==='hold') hold=true;
       events.push(ev); pos+=ev.dur;
@@ -372,7 +367,7 @@ function build(){
   songEnd=pos; mSet=new Set(mStart);
   let ni=0; for(const e of events) if(e.key!=null) e.ni=ni++;
   const notes=events.filter(e=>e.key!=null);
-  lastNote=notes[notes.length-1]; lastNoteEnd=lastNote.start+lastNote.dur;
+  firstNote=notes[0]; lastNote=notes[notes.length-1]; lastNoteEnd=lastNote.start+lastNote.dur;
   keyMin=Math.min(...notes.map(e=>e.key)); keyMax=Math.max(...notes.map(e=>e.key));
   keys=[]; for(let k=keyMin;k<=keyMax;k++) keys.push(k);
   const used=new Set(notes.map(e=>e.key)); keys.used=used;
@@ -403,7 +398,7 @@ function assignHands(){
   // how many beats before the hit this hand should start lifting the mallet
   const lastBy={L:-Infinity,R:-Infinity};
   for(const e of notes){e.up=Math.min(1,Math.max(.25,(e.start-lastBy[e.hand])*.5)); lastBy[e.hand]=e.start;}
-  if(typeof document!=='undefined') renderHandList();
+  if(typeof document!=='undefined'){renderHandList(); invalidate();}
 }
 function baseHands(notes,ov){
   if(S.hand==='auto') autoHands(notes,ov);
@@ -464,9 +459,12 @@ function range(){
   return {a,b,full,start:mStart[a],end:full?songEnd:mEnd[b],playEnd:full?songEnd+4:mEnd[b],clickEnd:full?Math.ceil(lastNoteEnd-1e-6):mEnd[b]};
 }
 function mIndexAt(p){let i=0; while(i+1<mStart.length&&mStart[i+1]<=p+1e-9) i++; return i;}
+// index of the first event starting at or after p (events are sorted by start)
+function evFrom(p){let lo=0,hi=events.length; while(lo<hi){const m=(lo+hi)>>1; if(events[m].start<p-1e-9) lo=m+1; else hi=m;} return lo;}
 const midi=k=>12*(Math.floor(k/7)+1)+SEMI[k%7]+(SONGS[S.song].sharps.includes(k%7)?1:0);
 const noteName=k=>S.names==='ko'?KO[k%7]:LETTERS[k%7];
 const octWord=k=>{const o=Math.floor(k/7); return o<4?'낮은':o>4?'높은':'';};
+const fullName=k=>(octWord(k)+' '+noteName(k)).trim();
 
 // ---------- audio ----------
 let ac=null,master=null,live=[];
@@ -495,16 +493,15 @@ const lat=()=>ac?((ac.outputLatency||ac.baseLatency||0)+S.offset/1000):0;
 // ---------- transport ----------
 let state='stopped', segs=[], frozen=0, playFrom=0, countStart=0, nextBeat=0, nextEv=0, holdQ=[], loops=0, curBpm=76, wakeLock=null, schedUpTo=0;
 function posAt(t){let s=segs[0]; for(const x of segs){if(x.t<=t) s=x; else break;} return s.pos+(t-s.t)*s.bpm/60;}
-function bpmAt(t){let s=segs[0]; for(const x of segs){if(x.t<=t) s=x; else break;} return s.bpm;}
 function timeOf(p){const s=segs[segs.length-1]; return s.t+(p-s.pos)*60/s.bpm;}
-function firstEvAt(p){const i=events.findIndex(e=>e.start>=p-1e-9); return i<0?events.length:i;}
+
 function resetPreview(){R=range(); playFrom=R.start; countStart=R.start-S.countIn; frozen=countStart; loops=0;}
 function play(from){
   ensureAudio(); stopNodes(); R=range();
   if(from==null) from=R.start;
   curBpm=S.bpm[S.song]; playFrom=from; countStart=from-S.countIn;
   segs=[{t:ac.currentTime+.12,pos:countStart,bpm:curBpm*scaleAt(countStart)}]; schedUpTo=countStart-1e-6;
-  nextBeat=Math.ceil(countStart-1e-9); nextEv=firstEvAt(from);
+  nextBeat=Math.ceil(countStart-1e-9); nextEv=evFrom(from);
   holdQ=holds.filter(h=>h>=from&&h<R.end); loops=0; state='playing'; bt.previewing=false;
   try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(l=>wakeLock=l).catch(()=>{});}catch(e){}
   ui();
@@ -548,7 +545,7 @@ function schedule(){
     const T=timeOf(R.playEnd); curBpm=Math.min(160,curBpm+S.loopInc); loops++;
     playFrom=R.start; countStart=R.start-S.countIn; schedUpTo=countStart-1e-6;
     segs.push({t:T,pos:countStart,bpm:curBpm*scaleAt(countStart)});
-    nextBeat=Math.ceil(countStart-1e-9); nextEv=firstEvAt(R.start);
+    nextBeat=Math.ceil(countStart-1e-9); nextEv=evFrom(R.start);
     holdQ=holds.filter(h=>h>=R.start&&h<R.end);
   }
 }
@@ -567,19 +564,21 @@ const cv=document.getElementById('cv'), g=cv.getContext('2d');
 let W=0,H=0,C={},hatch=null,GEO=null;
 const DISP='"Jua","IBM Plex Sans KR","Malgun Gothic",sans-serif', UI='"IBM Plex Sans KR","Malgun Gothic",sans-serif';
 const reduce=matchMedia('(prefers-reduced-motion: reduce)');
-function resize(){const r=cv.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1); W=r.width;H=r.height; cv.width=Math.round(W*d); cv.height=Math.round(H*d); g.setTransform(d,0,0,d,0,0);}
+function resize(){const r=cv.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1); W=r.width;H=r.height; cv.width=Math.round(W*d); cv.height=Math.round(H*d); g.setTransform(d,0,0,d,0,0); invalidate();}
+// while nothing moves (stopped, paused, waiting at a fermata) the canvas is redrawn only when something changed
+let dirty=true; function invalidate(){dirty=true;}
 new ResizeObserver(resize).observe(cv);
 function readColors(){
   const cs=getComputedStyle(document.documentElement);
   for(const k of ['stage','lane','grid','ink','muted','left','right','rest','accent','panel','wood','line']) C[k]=cs.getPropertyValue('--'+k).trim();
   const p=document.createElement('canvas'); p.width=p.height=14; const q=p.getContext('2d');
   q.strokeStyle=C.rest; q.lineWidth=2; q.beginPath(); q.moveTo(0,14); q.lineTo(14,0); q.moveTo(-4,4); q.lineTo(4,-4); q.moveTo(10,18); q.lineTo(18,10); q.stroke();
-  hatch=g.createPattern(p,'repeat');
+  hatch=g.createPattern(p,'repeat'); invalidate();
 }
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>setTimeout(readColors,0));
 function rr(x,y,w,h,r){r=Math.max(0,Math.min(r,w/2,h/2)); g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath();}
 const handCol=h=>h==='L'?C.left:C.right;
-const beatWord=d=>d===.5?'반 박':d===.25?'반의 반 박':(Number.isInteger(d)?d+'박':d+'박');
+const beatWord=d=>d===.5?'반 박':d===.25?'반의 반 박':d+'박';
 
 function drawTile(e,yt,yb,mx,laneW,ppb){
   const k=e.key-keyMin, gx=Math.max(3,laneW*.07), x=mx+k*laneW+gx, w=laneW-2*gx;
@@ -621,12 +620,11 @@ function drawRest(e,yt,yb,mx,lw){
     g.fillStyle=col; g.fillText(txt,mx+lw/2,(top+bot)/2+1);}
   g.globalAlpha=1;
 }
-function rnd(seed){let s=(seed>>>0)||1; return ()=>{s=(s*1664525+1013904223)>>>0; return s/4294967296;};}
 // pop effect: when a tile reaches the line it bursts — the tile swells and fades, one ring and 8 short rays spread out
 function drawFx(pos,mx,laneW,lw,hitY,ppb){
   const L=.4, gx=Math.max(3,laneW*.07);
-  for(const e of events){
-    if(e.start>pos) break;
+  for(let i=evFrom(pos-L);i<events.length;i++){
+    const e=events[i]; if(e.start>pos) break;
     if(e.key==null||e.start<playFrom-1e-9||e.start>=R.end-1e-9) continue;
     const dt=pos-e.start; if(dt>L) continue;
     const p=dt/L, f=1-p, w=laneW-2*gx, cx=mx+(e.key-keyMin+.5)*laneW, col=NOTE_COLORS[e.key%7];
@@ -647,7 +645,7 @@ function drawFx(pos,mx,laneW,lw,hitY,ppb){
 const easeOutP=m=>1-(1-m)*(1-m)*(1-m);
 // big mallets, one per hand: they really swing up before each note and come down onto the bar on the hit,
 // so the motion itself is the cue (readable from the back row). Long rests lay the mallet down in grey.
-function longRestAt(p){for(const e of events){if(e.start>p) break; if(p<e.start+e.dur) return e.key==null&&!e.prep&&e.run&&e.run.e-e.run.s>=1;} return false;}
+function longRestAt(p){const e=events[evFrom(p+1e-6)-1]; return !!(e&&p<e.start+e.dur&&e.key==null&&!e.prep&&e.run&&e.run.e-e.run.s>=1);}
 function drawMallets(pos,mx,laneW,hitY,ppb,resting){
   const hr=Math.max(16,Math.min(laneW*.36,42)), maxH=Math.max(70,Math.min(hitY*.5,280));
   const SL=Math.max(110,Math.min(hitY*.5,300)), lx=e=>mx+(e.key-keyMin+.5)*laneW;
@@ -718,17 +716,18 @@ function draw(pos){
     if(down&&b>=playFrom&&b<R.end){g.globalAlpha=.9; g.fillStyle=C.muted; g.font=`600 13px ${UI}`; g.textAlign='left'; g.textBaseline='bottom'; g.fillText((mIndexAt(b)+1)+'마디',mx+6,y-4);}
   }
   g.globalAlpha=1;
-  // tiles
+  // tiles (the longest note is a few beats, so starting 12 beats back covers everything still on screen)
+  const i0=evFrom(pos-12);
   g.save(); g.beginPath(); g.rect(0,0,W,hitY); g.clip();
-  for(const e of events){
-    if(e.start>pos+S.look+.5) break;
+  for(let i=i0;i<events.length;i++){
+    const e=events[i]; if(e.start>pos+S.look+.5) break;
     if(e.start<playFrom-1e-9||e.start>=R.end-1e-9) continue;
     const yb=yOf(e.start), yt=yOf(e.start+e.dur); if(yt>hitY) continue;
     if(e.key==null) drawRest(e,yt,yb,mx,lw); else drawTile(e,yt,yb,mx,laneW,ppb);
   }
   g.restore();
   // current context
-  let cur=null; if(pos>=playFrom) for(const e of events){if(e.start>pos+1e-9) break; if(pos<e.start+e.dur){cur=e;}}
+  let cur=null; if(pos>=playFrom) for(let i=i0;i<events.length;i++){const e=events[i]; if(e.start>pos+1e-9) break; if(pos<e.start+e.dur) cur=e;}
   if(cur&&cur.start>=R.end) cur=null;
   const inRest=cur&&cur.key==null&&!cur.prep&&(running||state==='holding');
   const longRest=inRest&&cur.run.e-cur.run.s>=1;
@@ -743,11 +742,11 @@ function draw(pos){
   g.strokeStyle=C.wood; g.lineWidth=7; g.lineCap='round';
   for(const f of [.17,.83]){g.beginPath(); g.moveTo(mx+laneW*.1,barY(-.4)+barH(-.4)*f); g.lineTo(mx+lw-laneW*.1,barY(N-.6)+barH(N-.6)*f); g.stroke();}
   const glow=new Map(), ringing=new Set();
-  if(pos>=playFrom) for(const e of events){
-    if(e.start>pos) break; if(e.key==null||e.start<playFrom||e.start>=R.end) continue;
+  if(pos>=playFrom) for(let i=i0;i<events.length;i++){
+    const e=events[i]; if(e.start>pos) break; if(e.key==null||e.start<playFrom||e.start>=R.end) continue;
     const dt=pos-e.start; if(dt<.45) glow.set(e.key,{i:1-dt/.45,h:e.hand}); if(dt<e.dur) ringing.add(e.key);
   }
-  let next=null; if(running||state==='holding') for(const e of events){if(e.start>pos+1e-6&&e.key!=null&&e.start>=playFrom&&e.start<R.end){next=e;break;}}
+  let next=null; if(running||state==='holding') for(let i=evFrom(pos+1e-6);i<events.length;i++){const e=events[i]; if(e.key!=null&&e.start>=playFrom&&e.start<R.end){next=e;break;}}
   for(let k=0;k<N;k++){
     const key=keyMin+k, used=keys.used.has(key), lift=glow.has(key)?glow.get(key).i*5:0;
     const bx=mx+k*laneW+gx*.6, bw=laneW-gx*1.2, by=barY(k)+lift*.8, bh=barH(k);
@@ -795,8 +794,7 @@ function draw(pos){
     g.fillStyle=on?(i===0?C.accent:C.ink):C.line; g.fill();}
   if(W>620){
     g.textAlign='right'; g.font=`20px ${DISP}`; g.fillStyle=C.ink;
-    const shown=curBpm;
-    g.fillText(`♩=${shown}`,W-16,hudH/2+1); const bw2=g.measureText(`♩=${shown}`).width;
+    g.fillText(`♩=${curBpm}`,W-16,hudH/2+1); const bw2=g.measureText(`♩=${curBpm}`).width;
     g.font=`17px ${DISP}`;
     if(S.hand!=='right'){let x=W-32-bw2; for(const [t,c] of [['오른손',C.right],['왼손',C.left]]){g.fillStyle=C.ink; g.fillText(t,x,hudH/2+1); const tw=g.measureText(t).width; g.fillStyle=c; rr(x-tw-26,hudH/2-9,18,18,5); g.fill(); x-=tw+40;}}
   }
@@ -814,7 +812,7 @@ function draw(pos){
   else if(cur&&cur.fermExt){const left=cur.start+cur.dur-pos;
     left>2?bigMsg('⌒ 길게~','소리를 들으며 기다려요',C.accent,cy,.75):bigMsg(KOR[Math.min(1,Math.floor(2-left))],'다시 시작!',C.accent,cy,.75);}
   else if(longRest){const left=cur.next-pos;
-    if(left<=1) bigMsg('준비!',(S.hideNames?'다음: ':`다음: ${octWord(next?next.key:0)} ${next?noteName(next.key):''} · `)+`${next&&next.hand==='L'?'왼손':'오른손'}`.replace('  ',' '),C.accent,cy,.75);
+    if(left<=1) bigMsg('준비!',`다음: ${next&&!S.hideNames?fullName(next.key)+' · ':''}${next&&next.hand==='L'?'왼손':'오른손'}`,C.accent,cy,.75);
     else bigMsg('쉬어요',`다음 음까지 ${Math.ceil(left-1e-6)}박`,C.rest,cy,.75);}
   else if(inRest) chip('쉼!',C.rest,W/2,hitY-26,22);
   if(running&&R.full&&pos>=playFrom&&lastNote.start-pos>0&&lastNote.start-pos<=4) chip(`마지막 음까지 ${Math.ceil(lastNote.start-pos-1e-6)}박`,C.right,W/2,hudH+24,18);
@@ -822,14 +820,16 @@ function draw(pos){
 function frame(){
   requestAnimationFrame(frame);
   if(bt.previewing) $('btNow').textContent=bt.el.currentTime.toFixed(3);
+  if(state!=='playing'&&!dirty) return;
+  dirty=false;
   let pos=frozen;
   if(state==='playing'){
     pos=posAt(ac.currentTime-lat());
     if(holdQ.length&&pos>=holdQ[0]){state='holding'; frozen=holdQ[0]; pos=frozen; ui();}
     else if(!S.loop&&pos>=R.playEnd){state=R.full?'ended':'stopped'; frozen=R.full?R.playEnd:R.start-S.countIn; pos=frozen; if(!R.full) playFrom=R.start; ui();}
   }
-  const mi=pos>=playFrom?mIndexAt(pos):-1;
-  if(mi!==curMeasure){curMeasure=mi; strip.querySelectorAll('.mb').forEach((b,i)=>b.classList.toggle('cur',i===mi&&state!=='stopped'));}
+  const mi=pos>=playFrom&&state!=='stopped'?mIndexAt(pos):-1;
+  if(mi!==curMeasure){curMeasure=mi; strip.querySelectorAll('.mb').forEach((b,i)=>b.classList.toggle('cur',i===mi));}
   draw(pos);
 }
 
@@ -852,7 +852,7 @@ function paintSel(){
   $('selInfo').textContent=pickStart!=null?`${pickStart+1}마디부터 · 끝 마디를 누르면 반복`
     :(a===0&&b===n-1)?'곡 전체':a===b?`${a+1}마디만${S.loop?' 반복':''}`:`${a+1}~${b+1}마디${S.loop?' 반복':''}`;
 }
-function applySel(){if(state!=='stopped'&&state!=='ended'){state='stopped'; if(ac) stopNodes();} paintSel(); resetPreview(); state='stopped'; ui();}
+function applySel(){paintSel(); stop();}
 // measure picking: 1st click = start (plays from there to the end), 2nd click = end of a section that repeats.
 // Clicking the same measure twice repeats just that one measure. Dragging across measures also makes a repeating section.
 let moved=false, pickStart=null;
@@ -920,7 +920,7 @@ function checkSongText(){
   p.sums.forEach((s,i)=>{if(i>0&&i<p.sums.length-1&&Math.abs(s-beats)>1e-6) warn.push(`${i+1}마디가 ${+s.toFixed(2)}박이에요 (${beats}박이어야 해요)`);});
   if(p.errors.length){el.className='hint bad'; el.textContent=p.errors.slice(0,4).join(' · ');}
   else{
-    const rng=p.lo<=p.hi?`${(octWord(p.lo)+' '+KO[p.lo%7]).trim()} ~ ${(octWord(p.hi)+' '+KO[p.hi%7]).trim()}`:'';
+    const rng=p.lo<=p.hi?`${fullName(p.lo)} ~ ${fullName(p.hi)}`:'';
     el.className=warn.length?'hint bad':'hint';
     el.textContent=`${p.measures.length}마디 · 음 범위 ${rng}`+(warn.length?' · 확인: '+warn.slice(0,3).join(', '):' · 좋아요!');
   }
@@ -976,12 +976,13 @@ $('sgSave').onclick=()=>{
   renderSongSeg(); renderMyList(); selectSong(rec.id,true);
   $('sgHead').textContent=`곡 고치기 · ${rec.title}`; $('sgMsg').textContent='저장했어요. 위에서 바로 연주해 볼 수 있어요.';
 };
-$('sgCopy').onclick=()=>{
-  const txt=songCode($('sgTitle').value.trim()||'새 곡',$('sgBpm').value,$('sgBeats').value,$('sgText').value);
-  const ta=$('sgCopyText'); ta.value=txt;
-  const fallback=()=>{ta.hidden=false; ta.focus(); ta.select(); $('sgMsg').textContent='아래 글을 선택해서 복사하세요.';};
-  try{navigator.clipboard.writeText(txt).then(()=>{$('sgMsg').textContent='곡 코드를 복사했어요.';},fallback);}catch(err){fallback();}
-};
+// copy to clipboard; if the browser refuses, show the text in a box to select by hand
+function copyText(txt,boxId,msgId,okMsg){
+  const ta=$(boxId); ta.value=txt;
+  const fallback=()=>{ta.hidden=false; ta.focus(); ta.select(); $(msgId).textContent='아래 글을 선택해서 복사하세요.';};
+  try{navigator.clipboard.writeText(txt).then(()=>{$(msgId).textContent=okMsg;},fallback);}catch(err){fallback();}
+}
+$('sgCopy').onclick=()=>copyText(songCode($('sgTitle').value.trim()||'새 곡',$('sgBpm').value,$('sgBeats').value,$('sgText').value),'sgCopyText','sgMsg','곡 코드를 복사했어요.');
 renderMyList();
 $('playBtn').onclick=toggle; $('stopBtn').onclick=stop;
 $('bpmDown').onclick=()=>setBpm(S.bpm[S.song]-2); $('bpmUp').onclick=()=>setBpm(S.bpm[S.song]+2);
@@ -998,30 +999,30 @@ function openPanel(id){
     const p=$(pid), open=pid===id&&p.hidden; p.hidden=!open; $(bid).setAttribute('aria-expanded',String(open));
     if(bid==='setBtn') $(bid).classList.toggle('on',open);
   }
+  if(id==='btPanel') btUI(); else if(id==='listPanel') renderHandList();
 }
 $('setBtn').onclick=()=>openPanel('panel'); $('btBtn').onclick=()=>openPanel('btPanel'); $('listBtn').onclick=()=>openPanel('listPanel'); $('songBtn').onclick=()=>openPanel('songPanel');
 const HW={L:'왼손',R:'오른손'};
 function handListItems(){
   return events.filter(e=>e.key!=null&&e.hand!==e.base).map(e=>({e,
-    text:`${e.m+1}마디 ${e.mi+1}번째 ${(octWord(e.key)+' '+KO[e.key%7]).trim()}: ${HW[e.base]} → ${HW[e.hand]}`,
+    text:`${e.m+1}마디 ${e.mi+1}번째 ${fullName(e.key)}: ${HW[e.base]} → ${HW[e.hand]}`,
     tag:e.src==='user'?'직접 바꿈':'함께 조정'}));
 }
 function renderHandList(){
+  if($('listPanel').hidden) return; // filled in when the panel opens
   const items=handListItems(), ol=$('handList');
   $('listTitle').textContent=`바꾼 손 목록 · ${SONGS[S.song].title}`;
   ol.innerHTML=items.length?'':'<li>바꾼 음이 없어요. 멈춘 상태에서 타일을 누르면 손을 바꿀 수 있어요.</li>';
   for(const it of items){
     const li=document.createElement('li'), e=it.e;
-    li.innerHTML=`${e.m+1}마디 ${e.mi+1}번째 <b>${(octWord(e.key)+' '+KO[e.key%7]).trim()}</b>: <span class="${e.base}">${HW[e.base]}</span> → <span class="${e.hand}">${HW[e.hand]}</span><span class="tag ${e.src==='user'?'user':''}">${it.tag}</span>`;
+    li.innerHTML=`${e.m+1}마디 ${e.mi+1}번째 <b>${fullName(e.key)}</b>: <span class="${e.base}">${HW[e.base]}</span> → <span class="${e.hand}">${HW[e.hand]}</span><span class="tag ${e.src==='user'?'user':''}">${it.tag}</span>`;
     ol.appendChild(li);
   }
   $('copyMsg').textContent='';
 }
 $('copyList').onclick=()=>{
-  const items=handListItems(), txt=`[${SONGS[S.song].title}] 바꾼 손\n`+(items.length?items.map(it=>`- ${it.text} (${it.tag})`).join('\n'):'- 없음');
-  const ta=$('listText'); ta.value=txt;
-  const fallback=()=>{ta.hidden=false; ta.focus(); ta.select(); $('copyMsg').textContent='아래 글을 선택해서 복사하세요.';};
-  try{navigator.clipboard.writeText(txt).then(()=>{$('copyMsg').textContent='복사했어요.';},fallback);}catch(err){fallback();}
+  const items=handListItems();
+  copyText(`[${SONGS[S.song].title}] 바꾼 손\n`+(items.length?items.map(it=>`- ${it.text} (${it.tag})`).join('\n'):'- 없음'),'listText','copyMsg','복사했어요.');
 };
 function fullscreen(){const el=$('app'); try{if(document.fullscreenElement) document.exitFullscreen(); else el.requestFullscreen().catch(()=>{});}catch(e){}}
 $('fsBtn').onclick=fullscreen;
@@ -1046,6 +1047,7 @@ function ui(){
   $('btBtn').classList.toggle('on',btActive()); $('btBtn').textContent=btActive()?'♫ 반주 켜짐':'♫ 반주';
   btUI();
   if(state!=='playing') curBpm=S.bpm[S.song];
+  invalidate();
 }
 addEventListener('keydown',e=>{
   if(e.key===' '&&tapNext!=null){e.preventDefault(); if(!e.repeat) recordTap(); return;}
@@ -1070,12 +1072,14 @@ const bt={el:new Audio(),ready:false,name:'',url:null,lastSeek:0,previewing:fals
 bt.el.preload='auto'; bt.el.preservesPitch=true; bt.el.mozPreservesPitch=true; bt.el.webkitPreservesPitch=true;
 const btCfg=()=>S.bt[S.song], btActive=()=>bt.ready&&!!btCfg().on;
 function fermMode(){return btActive()?'extend':S.ferm;}
-function firstNoteStart(){const e=events.find(x=>x.key!=null); return e?e.start:0;}
+const firstNoteStart=()=>firstNote?firstNote.start:0;
 // Time marks typed in the backing panel (first note, fermata note, restart after the fermata) become anchors:
 // between two anchors the tiles run at whatever tempo makes them land exactly on the recording.
 // The last 2 beats of a fermata keep the normal tempo so the "하나, 둘" count leads into the restart.
 // Per-bar marks (c.bars: {bar index: seconds}) add one anchor per bar, so a human-played track that drifts is followed bar by bar.
-function anchorsAll(){
+// cached: cleared by save() (every time-mark edit saves) and build()
+function anchorsAll(){return anchorCache||(anchorCache=computeAnchors());}
+function computeAnchors(){
   const c=btCfg(), b=60/c.bpm, bars=c.bars||{};
   let A=[{p:firstNoteStart(),t:c.first}];
   for(const [m,t] of Object.entries(bars)) if(t!=null&&mStart[+m]!=null) A.push({p:mStart[+m],t});
@@ -1146,7 +1150,8 @@ function preview(from){
   bt.previewing=true; btUI();
 }
 function btUI(){
-  const c=btCfg(), first=events.find(e=>e.key!=null);
+  if($('btPanel').hidden) return; // filled in when the panel opens
+  const c=btCfg();
   $('btTitle').textContent=`${SONGS[S.song].title} 반주`;
   $('btName').textContent=bt.name?`불러온 파일: ${bt.name}${bt.ready||bt.name.includes('(')?'':' · 불러오는 중…'}`:'아직 반주 파일이 없어요.';
   $('btDel').disabled=!bt.name;
@@ -1221,16 +1226,15 @@ $('barClear').onclick=()=>{
   clearArm=false; $('barClearMsg').textContent=''; btCfg().bars={}; save(); btUI();
 };
 // time marks: first note, and per fermata the fermata note (optional) and the restart after it
-const nmOf=e=>(octWord(e.key)+' '+noteName(e.key)).trim();
 function markDefs(){
-  const c=btCfg(), b=()=>60/c.bpm, first=events.find(e=>e.key!=null); if(!first) return [];
-  const defs=[{id:'first',label:`첫 음 · ${first.m+1}마디 ${nmOf(first)}`,get:()=>c.first,set:v=>{c.first=v;},est:()=>c.first}];
+  const c=btCfg(), b=()=>60/c.bpm, first=firstNote; if(!first) return [];
+  const defs=[{id:'first',label:`첫 음 · ${first.m+1}마디 ${fullName(first.key)}`,get:()=>c.first,set:v=>{c.first=v;},est:()=>c.first}];
   events.filter(e=>e.ferm&&e.key!=null).forEach((e,k)=>{
     const nx=events.find(x=>x.key!=null&&x.start>=e.start+e.dur-1e-9);
     const estF=()=>{const A=anchorsAll().filter(a=>a.p<=e.start); const L=A[A.length-1]; return L.t+(e.start-L.p)*b();};
-    defs.push({id:'f'+k,label:`늘임표 음 · ${e.m+1}마디 ${nmOf(e)} (넣지 않아도 돼요)`,opt:true,
+    defs.push({id:'f'+k,label:`늘임표 음 · ${e.m+1}마디 ${fullName(e.key)} (넣지 않아도 돼요)`,opt:true,
       get:()=>c.fermAt&&c.fermAt[k]!=null?c.fermAt[k]:null,set:v=>{(c.fermAt||(c.fermAt=[]))[k]=v;},est:estF});
-    if(nx) defs.push({id:'r'+k,label:`늘임표 뒤 다시 시작 · ${nx.m+1}마디 ${nmOf(nx)}`,opt:true,
+    if(nx) defs.push({id:'r'+k,label:`늘임표 뒤 다시 시작 · ${nx.m+1}마디 ${fullName(nx.key)}`,opt:true,
       get:()=>c.restart&&c.restart[k]!=null?c.restart[k]:null,set:v=>{(c.restart||(c.restart=[]))[k]=v;},
       est:()=>{const tf=(c.fermAt&&c.fermAt[k]!=null)?c.fermAt[k]:estF(); return tf+e.dur*b();}});
   });
@@ -1283,6 +1287,6 @@ $('btVol').oninput=e=>{S.btVol=+e.target.value; bt.el.volume=S.btVol; save();};
 
 loadBacking(S.song);
 readColors(); build(); selA=0; selB=mStart.length-1; buildStrip(); fillSplit(); resetPreview(); ui();
-if(document.fonts&&document.fonts.load) document.fonts.load('40px Jua').catch(()=>{});
+if(document.fonts&&document.fonts.load) document.fonts.load('40px Jua').then(invalidate,()=>{});
 requestAnimationFrame(frame);
 </script>
