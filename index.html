@@ -71,6 +71,13 @@ label.chk input{width:18px;height:18px;accent-color:var(--accent)}
 #panel h2,#btPanel h2,#songPanel h2{font:20px var(--font-disp);margin:0}
 #btPanel{width:min(460px,100%)}
 .marks{display:grid;gap:10px}
+.barlist{display:grid;gap:4px;max-height:280px;overflow:auto;padding-right:4px}
+.br{display:grid;grid-template-columns:52px 1fr repeat(4,auto);gap:4px;align-items:center;font-size:13px;font-variant-numeric:tabular-nums}
+.br input{width:100%;min-width:0;font:600 14px var(--font-ui);padding:4px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.br.set input{border-color:var(--accent)}
+.br.next{background:var(--sec2);border-radius:6px}
+.br button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:3px 7px;font:600 13px var(--font-ui);cursor:pointer}
+.br button:disabled{opacity:.4;cursor:default}
 .mk{display:grid;gap:5px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
 .mk-l{font-size:13px;font-weight:700}
 .mk input[type=number]{width:96px}
@@ -199,6 +206,13 @@ kbd{font:600 12px var(--font-ui);border:1px solid var(--line);border-bottom-widt
         <span>♩=</span><input type="number" id="btBpm" min="30" max="240" step="0.5" aria-label="반주 빠르기">
         <button class="btn" id="btHalf">÷2</button><button class="btn" id="btDouble">×2</button></div>
       <p class="hint">반주를 들으면서 악보의 한 박(♩)마다 8번 정도 탭하세요. 너무 빠르거나 느리게 나오면 ÷2, ×2를 누르세요.</p></div>
+    <div class="row"><span class="k">③ 마디마다 맞추기 (사람이 연주한 반주일 때)</span>
+      <p class="hint">반주가 조금씩 밀리거나 당겨지면 마디 첫 박마다 시간을 넣어 주세요. 넣은 마디마다 화면이 반주에 딱 맞춰져요. 다 넣지 않고 어긋나는 마디만 넣어도 돼요.</p>
+      <div class="bar"><label class="k2">시작 마디 <select id="barFrom"></select></label>
+        <button class="btn primary" id="barTapStart">▶ 탭으로 맞추기</button><button class="btn" id="barTap" disabled>탭 (Space)</button></div>
+      <p class="hint" id="barTapMsg"></p>
+      <div id="barList" class="barlist"></div>
+      <div class="bar"><button class="btn" id="barClear">마디 시간 모두 비우기</button><span class="hint" id="barClearMsg"></span></div></div>
     <div class="row"><span class="k">반주 소리 크기</span><input type="range" id="btVol" min="0" max="1" step="0.05"></div>
     <p class="hint">반주를 켜면 위의 빠르기를 바꿔도 음 높이는 그대로 두고 반주만 느려지거나 빨라져요. 늘임표는 반주에 맞게 자동으로 이어가니, 설정의 "더 늘이는 길이"를 반주 속 늘임표 길이에 맞춰 주세요.</p>
   </div>
@@ -1034,6 +1048,7 @@ function ui(){
   if(state!=='playing') curBpm=S.bpm[S.song];
 }
 addEventListener('keydown',e=>{
+  if(e.key===' '&&tapNext!=null){e.preventDefault(); if(!e.repeat) recordTap(); return;}
   if(e.target.tagName==='SELECT'||(e.target.tagName==='INPUT'&&e.target.type!=='checkbox'&&e.target.type!=='range')) return;
   const k=e.key;
   if(k===' '){e.preventDefault(); toggle();}
@@ -1059,16 +1074,27 @@ function firstNoteStart(){const e=events.find(x=>x.key!=null); return e?e.start:
 // Time marks typed in the backing panel (first note, fermata note, restart after the fermata) become anchors:
 // between two anchors the tiles run at whatever tempo makes them land exactly on the recording.
 // The last 2 beats of a fermata keep the normal tempo so the "하나, 둘" count leads into the restart.
+// Per-bar marks (c.bars: {bar index: seconds}) add one anchor per bar, so a human-played track that drifts is followed bar by bar.
 function anchorsAll(){
-  const c=btCfg(), b=60/c.bpm, A=[{p:firstNoteStart(),t:c.first}];
+  const c=btCfg(), b=60/c.bpm, bars=c.bars||{};
+  let A=[{p:firstNoteStart(),t:c.first}];
+  for(const [m,t] of Object.entries(bars)) if(t!=null&&mStart[+m]!=null) A.push({p:mStart[+m],t});
+  A.sort((x,y)=>x.p-y.p);
+  A=A.filter((a,i)=>!(i+1<A.length&&Math.abs(A[i+1].p-a.p)<1e-9)); // a bar mark wins over the first-note mark at the same spot
   events.filter(e=>e.ferm&&e.key!=null).forEach((e,k)=>{
-    const pf=e.start, pr=pf+e.dur, sEnd=e.dur>2?pr-2:pr, last=A[A.length-1];
-    const fset=c.fermAt&&c.fermAt[k], rset=c.restart&&c.restart[k];
+    const pf=e.start, pr=pf+e.dur, sEnd=e.dur>2?pr-2:pr;
+    const before=A.filter(a=>a.p<=pf+1e-9), last=before[before.length-1]||A[0];
+    const barR=A.find(a=>Math.abs(a.p-pr)<1e-9);
+    const fset=c.fermAt&&c.fermAt[k], rset=(c.restart&&c.restart[k]!=null)?c.restart[k]:(barR?barR.t:null);
     const tf=fset!=null?fset:last.t+(pf-last.p)*b;
+    A=A.filter(a=>!(a.p>pf-1e-9&&a.p<=pr+1e-9));
     if(fset!=null||rset!=null) A.push({p:pf,t:tf});
     if(rset!=null&&rset-tf>(pr-sEnd)*b+.05){if(sEnd<pr) A.push({p:sEnd,t:rset-(pr-sEnd)*b,stretch:true}); A.push({p:pr,t:rset,stretch:sEnd>=pr});}
+    else if(barR) A.push(barR);
+    A.sort((x,y)=>x.p-y.p);
   });
-  return A.filter((a,i)=>i===0||a.t>A[i-1].t+1e-3);
+  const out=[]; for(const a of A) if(!out.length||a.t>out[out.length-1].t+1e-3) out.push(a);
+  return out;
 }
 const anchors=()=>btActive()?anchorsAll():[];
 function audioT(p){
@@ -1096,7 +1122,8 @@ function syncBacking(){
 }
 function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('xylo-tiles',1); r.onupgradeneeded=()=>r.result.createObjectStore('bt'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);});}
 async function idbDo(mode,fn){try{const db=await idb(); return await new Promise((res,rej)=>{const tx=db.transaction('bt',mode), q=fn(tx.objectStore('bt')); tx.oncomplete=()=>res(q&&q.result); tx.onerror=()=>rej(tx.error);});}catch(e){return null;}}
-function stopPreview(){if(bt.previewing){bt.el.pause(); bt.previewing=false;}}
+let tapNext=null; // bar waiting for a tap while matching bars by ear
+function stopPreview(){tapNext=null; if(bt.previewing){bt.el.pause(); bt.previewing=false;}}
 function setBlob(blob,name){
   stopPreview(); if(bt.url){URL.revokeObjectURL(bt.url); bt.url=null;}
   bt.ready=false; bt.name=name||'';
@@ -1112,7 +1139,7 @@ async function loadBacking(song){
 bt.el.addEventListener('loadedmetadata',()=>{bt.ready=true; rebuildAll();});
 bt.el.addEventListener('error',()=>{if(bt.name&&bt.el.getAttribute('src')){bt.ready=false; bt.name+=' (이 브라우저에서 재생할 수 없는 파일이에요)'; ui();}});
 bt.el.addEventListener('timeupdate',()=>{if(bt.previewing) btUI();});
-bt.el.addEventListener('ended',()=>{bt.previewing=false; btUI();});
+bt.el.addEventListener('ended',()=>{bt.previewing=false; tapNext=null; btUI();});
 function preview(from){
   if(!bt.ready) return; if(state!=='stopped') stop();
   const el=bt.el; el.playbackRate=1; el.volume=S.btVol; el.currentTime=Math.max(0,from); el.play().catch(()=>{});
@@ -1138,7 +1165,61 @@ function btUI(){
     row.querySelector('[data-now]').disabled=!bt.previewing;
     row.querySelector('[data-hear]').disabled=!bt.ready;
   }
+  renderBars(); const bars=c.bars||{};
+  $('barList').querySelectorAll('.br').forEach(row=>{
+    const m=+row.dataset.m, inp=row.querySelector('input'), v=bars[m];
+    row.classList.toggle('set',v!=null); row.classList.toggle('next',tapNext===m);
+    if(document.activeElement!==inp){inp.value=v!=null?v.toFixed(3):''; inp.placeholder=bt.ready||c.first?`자동 ${audioT(mStart[m]).toFixed(3)}`:'';}
+    row.querySelector('[data-hear]').disabled=!bt.ready;
+  });
+  $('barTapStart').textContent=tapNext!=null?'■ 탭 그만하기':'▶ 탭으로 맞추기';
+  $('barTapStart').disabled=!bt.ready; $('barTap').disabled=tapNext==null;
+  $('barTapMsg').textContent=tapNext!=null?`${tapNext+1}마디 첫 박에 Space 키(또는 탭 버튼)를 누르세요.`:'';
 }
+// per-bar marks
+let barsKey='';
+function renderBars(){
+  const key=S.song+':'+mStart.length; if(key===barsKey) return; barsKey=key;
+  const list=$('barList'), sel=$('barFrom'); list.innerHTML=''; sel.innerHTML='';
+  mStart.forEach((_,m)=>{
+    const row=document.createElement('div'); row.className='br'; row.dataset.m=m;
+    row.innerHTML=`<span>${m+1}마디</span><input type="number" step="0.001" min="0" aria-label="${m+1}마디 시작 시간(초)">
+      <button data-d="-0.01" title="0.01초 앞으로">−</button><button data-d="0.01" title="0.01초 뒤로">+</button><button data-hear title="2초 전부터 듣기">▶</button><button data-clear title="비우기">✕</button>`;
+    list.appendChild(row);
+    const o=document.createElement('option'); o.value=m; o.textContent=`${m+1}마디`; sel.appendChild(o);
+  });
+}
+function setBar(m,v){const c=btCfg(); c.bars=c.bars||{}; if(v==null) delete c.bars[m]; else c.bars[m]=ms(v); save(); btUI();}
+$('barList').addEventListener('click',ev=>{
+  const btn=ev.target.closest('button'), row=ev.target.closest('.br'); if(!btn||!row) return;
+  const m=+row.dataset.m, c=btCfg(), cur=(c.bars&&c.bars[m]!=null)?c.bars[m]:audioT(mStart[m]);
+  if(btn.dataset.d) setBar(m,cur+parseFloat(btn.dataset.d));
+  else if(btn.hasAttribute('data-hear')) preview(cur-2);
+  else if(btn.hasAttribute('data-clear')) setBar(m,null);
+});
+$('barList').addEventListener('change',ev=>{
+  const row=ev.target.closest('.br'); if(!row||ev.target.tagName!=='INPUT') return;
+  const v=parseFloat(ev.target.value), m=+row.dataset.m; ev.target.blur();
+  setBar(m,ev.target.value.trim()===''?null:(v>=0?v:null));
+});
+function recordTap(){
+  if(tapNext==null||!bt.previewing) return;
+  const m=tapNext; tapNext=m+1<mStart.length?m+1:null;
+  setBar(m,bt.el.currentTime);
+  if(tapNext==null) stopPreview();
+  const row=$('barList').querySelector(`[data-m="${tapNext!=null?tapNext:m}"]`); if(row) row.scrollIntoView({block:'nearest'});
+  btUI();
+}
+$('barTapStart').onclick=()=>{
+  if(tapNext!=null){stopPreview(); btUI(); return;}
+  const m=+$('barFrom').value||0; preview(audioT(mStart[m])-4); tapNext=m; btUI();
+};
+$('barTap').onclick=recordTap;
+let clearArm=false;
+$('barClear').onclick=()=>{
+  if(!clearArm){clearArm=true; $('barClearMsg').textContent='한 번 더 누르면 지워져요.'; setTimeout(()=>{clearArm=false; $('barClearMsg').textContent='';},3000); return;}
+  clearArm=false; $('barClearMsg').textContent=''; btCfg().bars={}; save(); btUI();
+};
 // time marks: first note, and per fermata the fermata note (optional) and the restart after it
 const nmOf=e=>(octWord(e.key)+' '+noteName(e.key)).trim();
 function markDefs(){
