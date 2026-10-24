@@ -70,6 +70,7 @@ label.chk input{width:18px;height:18px;accent-color:var(--accent)}
 .pop{position:absolute;right:0;top:56px;z-index:5;width:min(380px,100%);max-height:calc(100% - 70px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px rgba(10,20,40,.18);padding:16px;display:grid;gap:14px}
 .pop.wide{width:min(460px,100%)}
 .pop h2{font:20px var(--font-disp);margin:0}
+@media (min-width:900px){#app.side .stage{margin-right:min(476px,48%)}}
 .marks{display:grid;gap:10px}
 .barlist{display:grid;gap:4px;max-height:280px;overflow:auto;padding-right:4px}
 .br{display:grid;grid-template-columns:52px 1fr repeat(4,auto);gap:4px;align-items:center;font-size:13px;font-variant-numeric:tabular-nums}
@@ -207,6 +208,8 @@ kbd{font:600 12px var(--font-ui);border:1px solid var(--line);border-bottom-widt
       <div class="bar"><label class="k2">시작 마디 <select id="barFrom"></select></label>
         <button class="btn primary" id="barTapStart">▶ 탭으로 맞추기</button><button class="btn" id="barTap" disabled>탭 (Space)</button></div>
       <p class="hint" id="barTapMsg"></p>
+      <label class="chk"><input type="checkbox" id="pvBell"> 맞추는 동안 실로폰 소리도 내기</label>
+      <p class="hint">반주를 듣는 동안 옆 화면에서 타일이 반주를 따라 떨어져요. 타일이 선에 닿는 순간과 반주 소리가 맞는지 보면서 그 마디 시간을 − / + 로 고치세요.</p>
       <div id="barList" class="barlist"></div>
       <div class="bar"><button class="btn" id="barClear">마디 시간 모두 비우기</button><span class="hint" id="barClearMsg"></span></div></div>
     <div class="row"><span class="k">반주 소리 크기</span><input type="range" id="btVol" min="0" max="1" step="0.05"></div>
@@ -331,7 +334,7 @@ function makeCustomSong(rec){
 // ---------- settings ----------
 const DEF={song:'rainbow',countIn:4,hideNames:0,hand:'auto',over:{rainbow:{},dynamite:{}},color:'note',names:'ko',look:6,ferm:'hold',loopInc:0,
   mallet:1,metVol:.7,melVol:.6,met:true,mel:false,offset:0,loop:false,bpm:{rainbow:76,dynamite:70},split:{rainbow:32,dynamite:33},
-  fermExt:2,btVol:.8,bt:{rainbow:{on:1,bpm:76,first:0},dynamite:{on:1,bpm:70,first:0}}};
+  fermExt:2,btVol:.8,pvBell:1,bt:{rainbow:{on:1,bpm:76,first:0},dynamite:{on:1,bpm:70,first:0}}};
 let S=structuredClone(DEF);
 try{const raw=localStorage.getItem('xylo-tiles-v1'); if(raw){const o=JSON.parse(raw), ob=o.bt||{};
   S={...S,...o,bpm:{...DEF.bpm,...o.bpm},split:{...DEF.split,...o.split},
@@ -819,7 +822,7 @@ function draw(pos){
 }
 function frame(){
   requestAnimationFrame(frame);
-  if(bt.previewing) $('btNow').textContent=bt.el.currentTime.toFixed(3);
+  if(bt.previewing){$('btNow').textContent=bt.el.currentTime.toFixed(3); drawPreview(); return;}
   if(state!=='playing'&&!dirty) return;
   dirty=false;
   let pos=frozen;
@@ -828,9 +831,20 @@ function frame(){
     if(holdQ.length&&pos>=holdQ[0]){state='holding'; frozen=holdQ[0]; pos=frozen; ui();}
     else if(!S.loop&&pos>=R.playEnd){state=R.full?'ended':'stopped'; frozen=R.full?R.playEnd:R.start-S.countIn; pos=frozen; if(!R.full) playFrom=R.start; ui();}
   }
-  const mi=pos>=playFrom&&state!=='stopped'?mIndexAt(pos):-1;
-  if(mi!==curMeasure){curMeasure=mi; strip.querySelectorAll('.mb').forEach((b,i)=>b.classList.toggle('cur',i===mi));}
+  markMeasure(pos>=playFrom&&state!=='stopped'?mIndexAt(pos):-1);
   draw(pos);
+}
+function markMeasure(mi){if(mi!==curMeasure){curMeasure=mi; strip.querySelectorAll('.mb').forEach((b,i)=>b.classList.toggle('cur',i===mi));}}
+// While the backing track is being checked in its panel, the stage follows the recording, so a tile reaching
+// the line can be compared with the sound. Optionally a xylophone note sounds at each tile too.
+let lastPv=null;
+function drawPreview(){
+  const pos=posFromAudio(bt.el.currentTime), keep=[playFrom,R,state];
+  if(S.pvBell&&ac&&lastPv!=null&&pos>lastPv&&pos-lastPv<1)
+    for(let i=evFrom(lastPv+1e-9);i<events.length&&events[i].start<=pos;i++) if(events[i].key!=null) bell(ac.currentTime,events[i].key);
+  lastPv=pos;
+  playFrom=-1e9; R={a:0,b:mStart.length-1,full:true,start:0,end:songEnd,playEnd:songEnd+4,clickEnd:songEnd}; state='playing';
+  try{markMeasure(mIndexAt(Math.max(0,pos))); draw(pos);} finally{[playFrom,R,state]=keep; dirty=true;}
 }
 
 // ---------- UI ----------
@@ -999,6 +1013,7 @@ function openPanel(id){
     const p=$(pid), open=pid===id&&p.hidden; p.hidden=!open; $(bid).setAttribute('aria-expanded',String(open));
     if(bid==='setBtn') $(bid).classList.toggle('on',open);
   }
+  $('app').classList.toggle('side',id==='btPanel'&&!$('btPanel').hidden); // keep the stage visible beside the backing panel
   if(id==='btPanel') btUI(); else if(id==='listPanel') renderHandList();
 }
 $('setBtn').onclick=()=>openPanel('panel'); $('btBtn').onclick=()=>openPanel('btPanel'); $('listBtn').onclick=()=>openPanel('listPanel'); $('songBtn').onclick=()=>openPanel('songPanel');
@@ -1107,6 +1122,13 @@ function audioT(p){
   for(let i=0;i+1<A.length;i++) if(p<A[i+1].p) return A[i].t+(p-A[i].p)/(A[i+1].p-A[i].p)*(A[i+1].t-A[i].t);
   const L=A[A.length-1]; return L.t+(p-L.p)*b;
 }
+// the other direction: a moment in the recording → position in beats
+function posFromAudio(t){
+  const b=60/btCfg().bpm, A=anchorsAll();
+  if(t<=A[0].t) return A[0].p+(t-A[0].t)/b;
+  for(let i=0;i+1<A.length;i++) if(t<A[i+1].t) return A[i].p+(t-A[i].t)/(A[i+1].t-A[i].t)*(A[i+1].p-A[i].p);
+  const L=A[A.length-1]; return L.p+(t-L.t)/b;
+}
 function segAt(p){const A=anchors(); for(let i=0;i+1<A.length;i++) if(p>=A[i].p-1e-9&&p<A[i+1].p-1e-9) return [A[i],A[i+1]]; return null;}
 function scaleAt(p){const s=segAt(p); return s?((s[1].p-s[0].p)*60/btCfg().bpm)/(s[1].t-s[0].t):1;}
 const tempoBounds=()=>anchors().map(a=>a.p);
@@ -1146,6 +1168,7 @@ bt.el.addEventListener('timeupdate',()=>{if(bt.previewing) btUI();});
 bt.el.addEventListener('ended',()=>{bt.previewing=false; tapNext=null; btUI();});
 function preview(from){
   if(!bt.ready) return; if(state!=='stopped') stop();
+  ensureAudio(); lastPv=null;
   const el=bt.el; el.playbackRate=1; el.volume=S.btVol; el.currentTime=Math.max(0,from); el.play().catch(()=>{});
   bt.previewing=true; btUI();
 }
@@ -1157,7 +1180,7 @@ function btUI(){
   $('btDel').disabled=!bt.name;
   $('btOnSeg').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(String(c.on)===b.dataset.v)));
   if(document.activeElement!==$('btBpm')) $('btBpm').value=c.bpm;
-  $('btVol').value=S.btVol;
+  $('btVol').value=S.btVol; $('pvBell').checked=!!S.pvBell;
   $('btPrev').textContent=bt.previewing?'❚❚ 듣기 멈춤':'▶ 처음부터 듣기';
   $('btNow').textContent=bt.el.currentTime.toFixed(3);
   for(const id of ['btPrev','btTap']) $(id).disabled=!bt.ready;
@@ -1284,6 +1307,7 @@ $('btBpm').onchange=e=>{const v=parseFloat(e.target.value); if(v>=20&&v<=300){bt
 $('btHalf').onclick=()=>{const c=btCfg(); c.bpm=Math.max(20,Math.round(c.bpm*5)/10); save(); btUI();};
 $('btDouble').onclick=()=>{const c=btCfg(); c.bpm=Math.min(300,c.bpm*2); save(); btUI();};
 $('btVol').oninput=e=>{S.btVol=+e.target.value; bt.el.volume=S.btVol; save();};
+$('pvBell').onchange=e=>{S.pvBell=e.target.checked?1:0; save();};
 
 loadBacking(S.song);
 readColors(); build(); selA=0; selB=mStart.length-1; buildStrip(); fillSplit(); resetPreview(); ui();
